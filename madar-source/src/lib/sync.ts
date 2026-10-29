@@ -102,7 +102,7 @@ export async function signIn(email: string, password: string, mode: 'login' | 's
   const c = getClient()
   if (!c) return { ok: false, error: 'المزامنة مش متظبطة' }
   const e = email.trim().toLowerCase()
-  const res = mode === 'signup' ? await c.auth.signUp({ email: e, password }) : await c.auth.signInWithPassword({ email: e, password })
+  const res = mode === 'signup' ? await c.auth.signUp({ email: e, password, options: { emailRedirectTo: location.origin + location.pathname } }) : await c.auth.signInWithPassword({ email: e, password })
   if (res.error) return { ok: false, error: arabicError(res.error.message) }
   if (!res.data.session) return { ok: false, needsConfirm: true, error: 'بعتنالك إيميل تأكيد. افتحيه ودوسي على اللينك، وبعدين ادخلي هنا.' }
   return { ok: true }
