@@ -10,7 +10,9 @@ export interface User {
   id: ID
   name: string
   phone?: string
-  email?: string
+  email?: string // used to sign in when sync is on
+  waOptIn?: boolean // send my alerts on WhatsApp (needs sync + the madar-whatsapp function)
+  waSince?: string // only alerts from this moment on
   initials: string
 }
 
@@ -81,6 +83,8 @@ export interface Task {
   comments: Comment[]
   createdAt: string
   completedAt?: string
+  rating?: number // 1..5 quality rating given when the task is done
+  ratedBy?: ID
 }
 
 export type NotificationKind =
@@ -90,6 +94,7 @@ export type NotificationKind =
   | 'comment'
   | 'status'
   | 'attendance'
+  | 'performance'
   | 'system'
 
 export interface AppNotification {
@@ -117,4 +122,74 @@ export interface AttendanceRecord {
   late: boolean
   plannedTaskIds: ID[]
   note?: string
+}
+
+/* ---------- performance (phase 3) ---------- */
+
+export type KpiPeriod = 'month' | 'quarter' | 'year'
+
+/** Cascading KPI: a company goal can break down into unit goals, then personal goals */
+export interface Kpi {
+  id: ID
+  companyId: ID
+  parentId: ID | null
+  title: string
+  unit: string // e.g. "جنيه", "%", "عميل"
+  target: number
+  current: number
+  higherIsBetter: boolean
+  period: KpiPeriod
+  ownerUnitId?: ID // goal of a division/department/team
+  ownerUserId?: ID // personal goal
+  weight: number // 1..5, used when averaging achievement
+}
+
+export type RatingCriterion = 'quality' | 'speed' | 'teamwork' | 'initiative' | 'discipline'
+
+/** A manager's monthly rating of one person in one company */
+export interface MonthlyRating {
+  id: ID
+  companyId: ID
+  userId: ID
+  raterId: ID
+  month: string // "2026-10"
+  scores: Record<RatingCriterion, number> // 1..5
+  note?: string
+  at: string
+}
+
+export type ReviewGrade = 'excellent' | 'very_good' | 'good' | 'fair' | 'weak'
+export type ReviewRecommendation = 'promotion' | 'raise' | 'keep' | 'improve'
+
+export interface AnnualReview {
+  id: ID
+  companyId: ID
+  userId: ID
+  reviewerId: ID
+  year: number
+  avgScore: number | null // average monthly commitment score
+  kpiAchievement: number | null // 0..100
+  grade: ReviewGrade
+  recommendation: ReviewRecommendation
+  strengths: string
+  improvements: string
+  at: string
+}
+
+export type PromotionStatus = 'proposed' | 'approved' | 'rejected'
+
+export interface Promotion {
+  id: ID
+  companyId: ID
+  userId: ID
+  proposedBy: ID
+  fromTitle?: string
+  toTitle: string
+  toRole?: Role
+  reason: string
+  effectiveDate: string // yyyy-mm-dd
+  status: PromotionStatus
+  decidedBy?: ID
+  decidedAt?: string
+  at: string
 }

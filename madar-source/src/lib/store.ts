@@ -2,8 +2,12 @@ import { create } from 'zustand'
 import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware'
 import type {
   AppNotification,
+  AnnualReview,
   AttendanceRecord,
   Company,
+  Kpi,
+  MonthlyRating,
+  Promotion,
   Comment,
   ID,
   Membership,
@@ -29,6 +33,10 @@ interface Data {
   notifications: AppNotification[]
   attendance: AttendanceRecord[]
   firedReminders: Record<string, true>
+  kpis: Kpi[]
+  ratings: MonthlyRating[]
+  reviews: AnnualReview[]
+  promotions: Promotion[]
 }
 
 interface Session {
@@ -60,7 +68,7 @@ interface Actions {
   removeTask: (id: ID) => void
   addComment: (taskId: ID, userId: ID, text: string) => void
 
-  notify: (n: Omit<AppNotification, 'id' | 'at' | 'read'>) => void
+  notify: (n: Omit<AppNotification, 'id' | 'at' | 'read'> & { id?: ID }) => void
   markRead: (id: ID) => void
   markAllRead: (userId: ID) => void
   clearRead: (userId: ID) => void
@@ -68,6 +76,15 @@ interface Actions {
 
   checkIn: (r: Omit<AttendanceRecord, 'id'>) => ID
   checkOut: (id: ID, note?: string) => void
+
+  addKpi: (k: Omit<Kpi, 'id'>) => ID
+  updateKpi: (id: ID, patch: Partial<Kpi>) => void
+  removeKpi: (id: ID) => void
+  rateMonth: (r: Omit<MonthlyRating, 'id' | 'at'>) => void
+  rateTask: (taskId: ID, rating: number, raterId: ID) => void
+  saveReview: (r: Omit<AnnualReview, 'id' | 'at'>) => void
+  proposePromotion: (p: Omit<Promotion, 'id' | 'at' | 'status'>) => void
+  decidePromotion: (id: ID, approve: boolean, deciderId: ID) => void
 
   resetToSample: () => void
   startFresh: () => void
@@ -105,10 +122,12 @@ export const useStore = create<State>()(
   persist(
     (set, get) => {
       const nameOf = (id?: ID) => get().users.find((u) => u.id === id)?.name.split(' ')[0] ?? 'حد'
-      const push = (n: Omit<AppNotification, 'id' | 'at' | 'read'>) =>
-        set((s) => ({
-          notifications: [{ ...n, id: uid('n_'), at: new Date().toISOString(), read: false }, ...s.notifications].slice(0, 300),
-        }))
+      // a fixed id makes the notification idempotent (several synced devices may raise the same reminder)
+      const push = (n: Omit<AppNotification, 'id' | 'at' | 'read'> & { id?: ID }) =>
+        set((s) => {
+          if (n.id && s.notifications.some((x) => x.id === n.id)) return s
+          return { notifications: [{ ...n, id: n.id ?? uid('n_'), at: new Date().toISOString(), read: false }, ...s.notifications].slice(0, 300) }
+        })
 
       return {
         ...seedData(),
@@ -143,6 +162,10 @@ export const useStore = create<State>()(
             tasks: s.tasks.filter((t) => t.companyId !== id),
             attendance: s.attendance.filter((a) => a.companyId !== id),
             notifications: s.notifications.filter((n) => n.companyId !== id),
+            kpis: s.kpis.filter((k) => k.companyId !== id),
+            ratings: s.ratings.filter((r) => r.companyId !== id),
+            reviews: s.reviews.filter((r) => r.companyId !== id),
+            promotions: s.promotions.filter((p) => p.companyId !== id),
           })),
         rotateQr: (id) => get().updateCompany(id, { qrSecret: randomSecret() }),
 
@@ -262,6 +285,65 @@ export const useStore = create<State>()(
         checkOut: (id, note) =>
           set((s) => ({ attendance: s.attendance.map((a) => (a.id === id ? { ...a, checkOutAt: new Date().toISOString(), note } : a)) })),
 
+        addKpi: (k) => {
+          const id = uid('k_')
+          set((s) => ({ kpis: [...s.kpis, { ...k, id }] }))
+          return id
+        },
+        updateKpi: (id, patch) => set((s) => ({ kpis: s.kpis.map((k) => (k.id === id ? { ...k, ...patch } : k)) })),
+        removeKpi: (id) =>
+          set((s) => {
+            const parent = s.kpis.find((k) => k.id === id)?.parentId ?? null
+            return { kpis: s.kpis.filter((k) => k.id !== id).map((k) => (k.parentId === id ? { ...k, parentId: parent } : k)) }
+          }),
+        rateMonth: (r) => {
+          set((s) => ({
+            ratings: [
+              ...s.ratings.filter((x) => !(x.userId === r.userId && x.companyId === r.companyId && x.month === r.month)),
+              { ...r, id: uid('r_'), at: new Date().toISOString() },
+            ],
+          }))
+          if (r.userId !== r.raterId)
+            push({ userId: r.userId, companyId: r.companyId, kind: 'performance', title: `${nameOf(r.raterId)} قيّم شغلك الشهر ده`, body: r.note || 'افتحي "أدائي" عشان تشوفي التفاصيل' })
+        },
+        rateTask: (taskId, rating, raterId) => {
+          const t = get().tasks.find((x) => x.id === taskId)
+          if (!t) return
+          set((s) => ({ tasks: s.tasks.map((x) => (x.id === taskId ? { ...x, rating, ratedBy: raterId } : x)) }))
+          if (t.assigneeId && t.assigneeId !== raterId)
+            push({ userId: t.assigneeId, companyId: t.companyId, kind: 'performance', title: `${nameOf(raterId)} قيّم مهمتك ${rating} من 5`, body: t.title, taskId })
+        },
+        saveReview: (r) => {
+          set((s) => ({
+            reviews: [
+              ...s.reviews.filter((x) => !(x.userId === r.userId && x.companyId === r.companyId && x.year === r.year)),
+              { ...r, id: uid('rv_'), at: new Date().toISOString() },
+            ],
+          }))
+          push({ userId: r.userId, companyId: r.companyId, kind: 'performance', title: `التقييم السنوي ${r.year} جاهز`, body: 'افتحي "أدائي" عشان تشوفيه' })
+        },
+        proposePromotion: (p) => {
+          set((s) => ({ promotions: [{ ...p, id: uid('p_'), status: 'proposed', at: new Date().toISOString() }, ...s.promotions] }))
+          get()
+            .memberships.filter((m) => m.companyId === p.companyId && m.role === 'admin' && m.userId !== p.proposedBy)
+            .forEach((m) =>
+              push({ userId: m.userId, companyId: p.companyId, kind: 'performance', title: `${nameOf(p.proposedBy)} اقترح ترقية لـ ${nameOf(p.userId)}`, body: `${p.fromTitle ?? '—'} ← ${p.toTitle}` }),
+            )
+        },
+        decidePromotion: (id, approve, deciderId) => {
+          const p = get().promotions.find((x) => x.id === id)
+          if (!p || p.status !== 'proposed') return
+          set((s) => ({
+            promotions: s.promotions.map((x) => (x.id === id ? { ...x, status: approve ? 'approved' : 'rejected', decidedBy: deciderId, decidedAt: new Date().toISOString() } : x)),
+            memberships: approve
+              ? s.memberships.map((m) => (m.userId === p.userId && m.companyId === p.companyId ? { ...m, title: p.toTitle, role: p.toRole ?? m.role } : m))
+              : s.memberships,
+          }))
+          if (approve) push({ userId: p.userId, companyId: p.companyId, kind: 'performance', title: 'مبروك! اتعتمدت ترقيتك', body: `بقيتي ${p.toTitle} من ${p.effectiveDate}` })
+          if (p.proposedBy !== deciderId)
+            push({ userId: p.proposedBy, companyId: p.companyId, kind: 'performance', title: approve ? `ترقية ${nameOf(p.userId)} اتعتمدت` : `ترقية ${nameOf(p.userId)} اترفضت`, body: p.toTitle })
+        },
+
         resetToSample: () => set({ ...seedData() }),
         startFresh: () => {
           const s = get()
@@ -275,6 +357,10 @@ export const useStore = create<State>()(
             notifications: [],
             attendance: [],
             firedReminders: {},
+            kpis: [],
+            ratings: [],
+            reviews: [],
+            promotions: [],
             currentUserId: me.id,
           })
         },
@@ -299,7 +385,7 @@ export interface Toast {
 interface UI {
   companyFilter: ID | 'all'
   openTaskId: ID | null
-  newTask: null | { companyId?: ID; dueAt?: string; status?: Task['status'] }
+  newTask: null | { companyId?: ID; dueAt?: string; status?: Task['status']; title?: string; priority?: Task['priority']; assigneeId?: ID }
   toasts: Toast[]
   confirmReq: null | { message: string; resolve: (ok: boolean) => void }
   setCompanyFilter: (c: ID | 'all') => void

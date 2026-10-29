@@ -52,14 +52,14 @@ export function useReminderEngine() {
           s.markReminderFired(remKey)
           const mins = Math.max(1, Math.round((due - now) / 60000))
           if (t.assigneeId)
-            s.notify({ userId: t.assigneeId, companyId: t.companyId, kind: 'reminder', title: `فاضل ${mins} دقيقة على الميعاد`, body: t.title, taskId: t.id })
+            s.notify({ id: `rem:${t.id}:${t.dueAt}`, userId: t.assigneeId, companyId: t.companyId, kind: 'reminder', title: `فاضل ${mins} دقيقة على الميعاد`, body: t.title, taskId: t.id })
         }
         const lateKey = `late:${t.id}`
         // only alert for things that became late recently (avoid a flood on first open)
         if (now >= due && now - due < 3 * 864e5 && !s.firedReminders[lateKey]) {
           s.markReminderFired(lateKey)
           audience.forEach((u) =>
-            s.notify({ userId: u, companyId: t.companyId, kind: 'overdue', title: 'مهمة عدّت ميعادها', body: t.title, taskId: t.id }),
+            s.notify({ id: `late:${t.id}:${t.dueAt}:${u}`, userId: u, companyId: t.companyId, kind: 'overdue', title: 'مهمة عدّت ميعادها', body: t.title, taskId: t.id }),
           )
         }
       }

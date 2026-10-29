@@ -35,11 +35,11 @@ export function NewTaskModal() {
       <TaskEditor
         initial={{
           companyId,
-          title: '',
+          title: preset.title ?? '',
           description: '',
           status: preset.status ?? 'todo',
-          priority: 'medium',
-          assigneeId: me,
+          priority: preset.priority ?? 'medium',
+          assigneeId: preset.assigneeId ?? me,
           creatorId: me,
           dueAt: preset.dueAt ?? defaultDue(),
           remindBefore: 30,
