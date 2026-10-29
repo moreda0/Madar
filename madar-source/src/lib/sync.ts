@@ -104,6 +104,12 @@ export async function signIn(email: string, password: string, mode: 'login' | 's
   const e = email.trim().toLowerCase()
   const res = mode === 'signup' ? await c.auth.signUp({ email: e, password, options: { emailRedirectTo: location.origin + location.pathname } }) : await c.auth.signInWithPassword({ email: e, password })
   if (res.error) return { ok: false, error: arabicError(res.error.message) }
+  // already registered and confirmed: "first time" with the same password should just log in
+  if (mode === 'signup' && !res.data.session && !res.data.user?.identities?.length) {
+    const again = await c.auth.signInWithPassword({ email: e, password })
+    if (!again.error && again.data.session) return { ok: true }
+    return { ok: false, error: 'الإيميل ده متسجل قبل كده. اختاري "دخول" واكتبي الباسورد بتاعك.' }
+  }
   if (!res.data.session) return { ok: false, needsConfirm: true, error: 'بعتنالك إيميل تأكيد. افتحيه ودوسي على اللينك، وبعدين ادخلي هنا.' }
   return { ok: true }
 }
