@@ -96,7 +96,7 @@ function KanbanView({ tasks }: { tasks: Task[] }) {
   return (
     <div className="kanban">
       {STATUS_ORDER.map((st) => {
-        const col = tasks.filter((t) => t.status === st).sort((a, b) => PRIORITY_WEIGHT[a.priority] - PRIORITY_WEIGHT[b.priority])
+        const col = tasks.filter((t) => t.status === st && (st !== 'done' || !t.completedAt || Date.now() - +new Date(t.completedAt) < 14 * 864e5)).sort((a, b) => PRIORITY_WEIGHT[a.priority] - PRIORITY_WEIGHT[b.priority])
         return (
           <div
             key={st}

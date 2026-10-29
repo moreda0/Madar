@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { ask, useStore, useUI } from '../lib/store'
 import { useMe } from '../lib/access'
 import { requestSystemNotifications } from '../lib/reminders'
 import { initialsOf } from '../lib/utils'
 import { Avatar } from '../components/ui'
 import { Icon } from '../components/Icon'
+import { useSync } from '../lib/sync'
+import { SyncCard, logoutEverywhere, syncOn } from '../components/Sync'
 
 type InstallEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> }
 let deferredInstall: InstallEvent | null = null
@@ -14,19 +17,21 @@ window.addEventListener('beforeinstallprompt', (e) => {
 })
 
 const ROADMAP = [
-  { t: 'المرحلة 1 (دي)', d: 'الشركات والهيكل والصلاحيات، المهام بكل أشكالها، التنبيهات والتذكيرات، الحضور بالموقع والكود', on: true },
-  { t: 'المرحلة 2', d: 'حساب حقيقي وبيانات على السيرفر (Supabase) تتزامن بين اللابتوب والموبايل والفريق' },
-  { t: 'المرحلة 3', d: 'التقييمات، درجة الالتزام الشهرية من 100، التقييم السنوي، الترقيات، ومؤشرات الأداء KPIs' },
-  { t: 'المرحلة 4', d: 'مساعد مدار الذكي بالمصري، وتنبيهات واتساب رايح جاي على رقمك' },
+  { t: 'المرحلة 1', d: 'الشركات والهيكل والصلاحيات، المهام بكل أشكالها، التنبيهات والتذكيرات، الحضور بالموقع والكود', on: true },
+  { t: 'الأداء والتقييم', d: 'درجة الالتزام الشهرية من 100، تقييم المدير وتقييم المهام، مؤشرات KPIs متدرجة، التقييم السنوي، والترقيات', on: true },
+  { t: 'المزامنة', d: 'حساب حقيقي بالإيميل وبيانات على السيرفر (Supabase) تتزامن بين اللابتوب والموبايل والفريق، وبتشتغل من غير نت', on: true },
+  { t: 'مساعد مدار', d: 'بيفهم المصري بالكتابة والصوت: ملخص يومك، المتأخر، يضيف ويقفل مهام. ومع Claude أونلاين بيجاوب أي سؤال', on: true },
+  { t: 'واتساب رايح جاي', d: 'التنبيهات توصلك واتساب بزرار "خلصت" و"فكّريني بعد ساعة"، وردك يحدّث مدار ويشيل التنبيه من كل مكان', on: true },
+  { t: 'الجاي', d: 'فهم الرسايل الصوتية على واتساب، وتقارير شهرية تتبعت لوحدها' },
 ]
 
 export function Settings() {
   const me = useMe()!
   const updateUser = useStore((s) => s.updateUser)
-  const logout = useStore((s) => s.logout)
   const resetToSample = useStore((s) => s.resetToSample)
   const startFresh = useStore((s) => s.startFresh)
   const toast = useUI((s) => s.toast)
+  const isOwner = useSync((s) => s.role === 'owner' || s.role === 'owner-new')
   const [name, setName] = useState(me.name)
   const [phone, setPhone] = useState(me.phone ?? '')
   const [perm, setPerm] = useState<string>(() => ('Notification' in window ? Notification.permission : 'unsupported'))
@@ -53,6 +58,11 @@ export function Settings() {
 
   return (
     <div className="grid grid-2" style={{ alignItems: 'start' }}>
+      <Link to="/org" className="card row mobile-only span-2" style={{ color: 'inherit', gap: 12 }}>
+        <Icon name="org" />
+        <span style={{ flex: 1, fontWeight: 600 }}>الهيكل التنظيمي والفريق والشركات</span>
+        <Icon name="chevron" size={18} className="muted" />
+      </Link>
       <form
         className="card stack"
         style={{ gap: 14 }}
@@ -64,11 +74,12 @@ export function Settings() {
       >
         <div className="row"><Avatar user={me} size="lg" /><h2>حسابي</h2></div>
         <label className="field"><span>الاسم</span><input className="input" value={name} onChange={(e) => setName(e.target.value)} /></label>
+        {me.email && <div className="field"><span>الإيميل</span><div className="num" dir="ltr" style={{ textAlign: 'start' }}>{me.email}</div></div>}
         <label className="field"><span>رقم الموبايل (للواتساب)</span><input className="input num" dir="ltr" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+20 1xx xxx xxxx" /></label>
         <div className="row">
           <button className="btn primary">احفظي</button>
           <span className="spacer" />
-          <button type="button" className="btn ghost" onClick={logout}><Icon name="logout" size={18} /> خروج</button>
+          <button type="button" className="btn ghost" onClick={logoutEverywhere}><Icon name="logout" size={18} /> خروج</button>
         </div>
       </form>
 
@@ -97,15 +108,35 @@ export function Settings() {
         </div>
       </div>
 
+      <SyncCard />
+
+      <div className="card stack" style={{ gap: 12 }}>
+        <div className="row"><Icon name="whatsapp" /><h2 style={{ flex: 1 }}>تنبيهات واتساب</h2></div>
+        {!syncOn() ? (
+          <p className="soft" style={{ margin: 0, fontSize: 14 }}>الواتساب بيشتغل من السيرفر، فمحتاج المزامنة أونلاين تبقى شغالة الأول.</p>
+        ) : (
+          <>
+            <p className="soft" style={{ margin: 0, fontSize: 14 }}>
+              التذكيرات والمتأخر والمهام الجديدة توصلك واتساب حتى لو مدار مقفول، وتردي من هناك: "خلصت" أو "فكّريني بعد ساعة"، أو ابعتي "مهامي".
+            </p>
+            {!me.phone && <p style={{ margin: 0, color: 'var(--amber)', fontSize: 14 }}>اكتبي رقم موبايلك فوق واحفظي الأول.</p>}
+            <label className="row" style={{ gap: 10, cursor: me.phone ? 'pointer' : 'not-allowed', opacity: me.phone ? 1 : 0.5 }}>
+              <input type="checkbox" disabled={!me.phone} checked={!!me.waOptIn} onChange={(e) => { updateUser(me.id, { waOptIn: e.target.checked, waSince: e.target.checked ? new Date().toISOString() : me.waSince }); toast({ title: e.target.checked ? 'هتوصلك التنبيهات على واتساب' : 'وقفنا تنبيهات واتساب', tone: 'ok' }) }} style={{ width: 20, height: 20, accentColor: 'var(--green)' }} />
+              <span style={{ fontWeight: 600 }}>ابعتيلي التنبيهات على واتساب</span>
+            </label>
+          </>
+        )}
+      </div>
+
       <div className="card stack" style={{ gap: 12 }}>
         <h2>البيانات</h2>
         <p className="soft" style={{ margin: 0, fontSize: 14 }}>
-          النسخة دي بتحفظ كل حاجة على الجهاز ده بس. الشركات والأسماء اللي موجودة دلوقتي أمثلة عشان تجربي.
+          {syncOn() ? 'أي مسح هنا بيتمسح من عند الفريق كله كمان.' : 'النسخة دي بتحفظ كل حاجة على الجهاز ده بس. الشركات والأسماء اللي موجودة دلوقتي أمثلة عشان تجربي.'}
         </p>
         <div className="row wrap">
           <button className="btn" onClick={exportData}><Icon name="download" size={18} /> نزّلي نسخة احتياطية</button>
-          <button className="btn" onClick={async () => (await ask('نرجّع بيانات التجربة؟ أي تعديل هيتمسح.')) && (resetToSample(), toast({ title: 'رجعت بيانات التجربة', tone: 'ok' }))}><Icon name="refresh" size={18} /> رجّعي بيانات التجربة</button>
-          <button className="btn danger" onClick={async () => (await ask('نمسح كل الأمثلة ونبدأ من الصفر؟')) && (startFresh(), toast({ title: 'بدأنا من الصفر، ضيفي أول شركة من الهيكل', tone: 'ok' }))}><Icon name="trash" size={18} /> ابدئي من الصفر</button>
+          {!syncOn() && <button className="btn" onClick={async () => (await ask('نرجّع بيانات التجربة؟ أي تعديل هيتمسح.')) && (resetToSample(), toast({ title: 'رجعت بيانات التجربة', tone: 'ok' }))}><Icon name="refresh" size={18} /> رجّعي بيانات التجربة</button>}
+          {(!syncOn() || isOwner) && <button className="btn danger" onClick={async () => (await ask(syncOn() ? 'نمسح كل البيانات من عند الفريق كله ونبدأ من الصفر؟ مفيش رجوع.' : 'نمسح كل الأمثلة ونبدأ من الصفر؟')) && (startFresh(), toast({ title: 'بدأنا من الصفر، ضيفي أول شركة من الهيكل', tone: 'ok' }))}><Icon name="trash" size={18} /> ابدئي من الصفر</button>}
         </div>
       </div>
 

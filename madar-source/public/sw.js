@@ -1,5 +1,5 @@
 // مدار service worker: app shell cache so it opens offline, plus notification clicks.
-const CACHE = 'madar-v1'
+const CACHE = 'madar-v5'
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', './index.html', './manifest.webmanifest', './icons/icon-192.png'])))

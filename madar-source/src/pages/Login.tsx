@@ -3,6 +3,7 @@ import { useStore } from '../lib/store'
 import { initialsOf, ROLE_LABEL } from '../lib/utils'
 import { Avatar } from '../components/ui'
 import { Icon } from '../components/Icon'
+import { SyncLoginForm, syncOn } from '../components/Sync'
 
 export function Login() {
   const users = useStore((s) => s.users)
@@ -30,6 +31,7 @@ export function Login() {
           </div>
         </div>
 
+        {syncOn() ? <SyncLoginForm /> : <>
         <div className="card stack" style={{ gap: 12 }}>
           <h2>ادخلي باسم</h2>
           <p className="muted" style={{ margin: 0, fontSize: 13 }}>
@@ -63,6 +65,7 @@ export function Login() {
             <button className="btn primary" disabled={!name.trim()}>ابدئي</button>
           </div>
         </form>
+        </>}
       </div>
     </div>
   )

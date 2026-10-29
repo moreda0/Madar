@@ -189,6 +189,8 @@ function Team({ company, isAdmin }: { company: Company; isAdmin: boolean }) {
   const upsert = useStore((s) => s.upsertMembership)
   const remove = useStore((s) => s.removeMembership)
   const addUser = useStore((s) => s.addUser)
+  const updateUser = useStore((s) => s.updateUser)
+  const [email, setEmail] = useState('')
   const [adding, setAdding] = useState(false)
   const [pick, setPick] = useState('')
   const [name, setName] = useState('')
@@ -206,7 +208,7 @@ function Team({ company, isAdmin }: { company: Company; isAdmin: boolean }) {
       </div>
       <div className="tbl-wrap">
         <table className="tbl">
-          <thead><tr><th>الاسم</th><th>المسمى</th><th>الصلاحية</th><th>تابع لـ</th><th>مهام مفتوحة</th>{isAdmin && <th><span className="sr-only">إجراءات</span></th>}</tr></thead>
+          <thead><tr><th>الاسم</th>{isAdmin && <th>الإيميل (للدخول)</th>}<th>المسمى</th><th>الصلاحية</th><th>تابع لـ</th><th>مهام مفتوحة</th>{isAdmin && <th><span className="sr-only">إجراءات</span></th>}</tr></thead>
           <tbody>
             {memberships.map((m) => {
               const u = users[m.userId]
@@ -214,6 +216,9 @@ function Team({ company, isAdmin }: { company: Company; isAdmin: boolean }) {
               return (
                 <tr key={m.userId}>
                   <td><span className="row" style={{ gap: 8 }}><Avatar user={u} size="sm" />{u?.name}{m.userId === me && <span className="muted"> (أنا)</span>}</span></td>
+                  {isAdmin && (
+                    <td><input className="input num" dir="ltr" type="email" style={{ minHeight: 36, padding: '6px 10px', minWidth: 190 }} key={u?.email ?? ''} defaultValue={u?.email ?? ''} placeholder="name@mail.com" onBlur={(e) => { const v = e.target.value.trim().toLowerCase() || undefined; if (v !== u?.email) updateUser(m.userId, { email: v }) }} aria-label={`إيميل ${u?.name}`} /></td>
+                  )}
                   <td>
                     {isAdmin ? <input className="input" style={{ minHeight: 36, padding: '6px 10px' }} value={m.title ?? ''} placeholder="—" onChange={(e) => upsert({ ...m, title: e.target.value })} aria-label="المسمى" /> : m.title ?? '—'}
                   </td>
@@ -256,10 +261,10 @@ function Team({ company, isAdmin }: { company: Company; isAdmin: boolean }) {
               let userId = pick
               if (!userId) {
                 if (!name.trim()) return
-                userId = addUser({ name: name.trim(), phone: phone.trim() || undefined, initials: initialsOf(name) })
+                userId = addUser({ name: name.trim(), phone: phone.trim() || undefined, email: email.trim().toLowerCase() || undefined, initials: initialsOf(name) })
               }
               upsert({ userId, companyId: company.id, role })
-              setAdding(false); setPick(''); setName(''); setPhone('')
+              setAdding(false); setPick(''); setName(''); setPhone(''); setEmail('')
             }}
           >
             <h2>ضيفي حد لـ {company.short}</h2>
@@ -274,6 +279,7 @@ function Team({ company, isAdmin }: { company: Company; isAdmin: boolean }) {
             {!pick && (
               <>
                 <label className="field"><span>الاسم</span><input className="input" value={name} onChange={(e) => setName(e.target.value)} autoFocus /></label>
+                <label className="field"><span>الإيميل (هيدخل بيه مدار)</span><input className="input num" type="email" dir="ltr" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@mail.com" /></label>
                 <label className="field"><span>رقم الموبايل (للواتساب بعدين)</span><input className="input num" inputMode="tel" dir="ltr" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+20 1xx xxx xxxx" /></label>
               </>
             )}

@@ -5,6 +5,7 @@ import { dueLabel, fmtDay, fmtTime, PRIORITY_COLOR, PRIORITY_LABEL, REMIND_OPTIO
 import { Avatar, CompanyTag, Overlay } from './ui'
 import { TaskEditor } from './TaskForm'
 import { Icon } from './Icon'
+import { Stars } from '../pages/Performance'
 
 export function TaskDrawer() {
   const id = useUI((s) => s.openTaskId)
@@ -16,6 +17,7 @@ export function TaskDrawer() {
   const updateTask = useStore((s) => s.updateTask)
   const removeTask = useStore((s) => s.removeTask)
   const addComment = useStore((s) => s.addComment)
+  const rateTask = useStore((s) => s.rateTask)
   const toast = useUI((s) => s.toast)
   const companies = useCompanyMap()
   const users = useUserMap()
@@ -28,6 +30,7 @@ export function TaskDrawer() {
   const role = roleIn(memberships, me, task.companyId)
   const canEdit = role === 'admin' || role === 'manager' || task.creatorId === me
   const canDelete = role === 'admin' || task.creatorId === me
+  const canRate = task.assigneeId !== me && (role === 'admin' || role === 'manager' || task.creatorId === me)
   const unit = units.find((u) => u.id === task.unitId)
   const due = dueLabel(task.dueAt)
   const subDone = task.subtasks.filter((s) => s.done).length
@@ -90,6 +93,16 @@ export function TaskDrawer() {
           <Info label="أنشأها">{users[task.creatorId]?.name ?? '—'}</Info>
           {task.completedAt && <Info label="خلصت">{fmtDay(task.completedAt)} · <span className="num">{fmtTime(task.completedAt)}</span></Info>}
         </div>
+
+        {task.status === 'done' && (task.rating || canRate) && (
+          <section className="card row wrap" style={{ padding: 14, justifyContent: 'space-between' }}>
+            <div>
+              <h3>جودة الشغل</h3>
+              <div className="muted" style={{ fontSize: 12 }}>{task.rating ? `قيّمها ${users[task.ratedBy ?? '']?.name ?? ''}` : 'قيّمي المهمة، والتقييم بيدخل في درجة الالتزام'}</div>
+            </div>
+            <Stars value={task.rating ?? 0} onChange={canRate ? (v) => rateTask(task.id, v, me) : undefined} label="تقييم جودة المهمة" />
+          </section>
+        )}
 
         <section className="card" style={{ padding: 14 }}>
           <div className="card-head" style={{ marginBottom: 8 }}>

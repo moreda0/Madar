@@ -14,6 +14,7 @@ const KIND: Record<NotificationKind, { icon: string; color: string; label: strin
   comment: { icon: 'comment', color: '#A78BFA', label: 'تعليق' },
   status: { icon: 'check', color: '#34D399', label: 'تحديث' },
   attendance: { icon: 'pin', color: '#7DE3F4', label: 'حضور' },
+  performance: { icon: 'chart', color: '#FBBF24', label: 'الأداء' },
   system: { icon: 'sparkle', color: '#C4B5FD', label: 'النظام' },
 }
 
