@@ -337,10 +337,12 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (req.method !== 'POST') return json({ error: 'method' }, 405)
   try {
-    const key = req.headers.get('x-madar-key') ?? new URL(req.url).searchParams.get('key')
+    const key = (req.headers.get('x-madar-key') ?? new URL(req.url).searchParams.get('key'))?.trim()
     if (key) {
-      const want = env('MEETINGS_INBOX_KEY')
-      if (!want || key !== want) return json({ error: 'bad-key' }, 401)
+      // pasted secrets often carry a stray space or newline
+      const want = env('MEETINGS_INBOX_KEY').trim()
+      if (!want) return json({ error: 'inbox-not-configured' }, 503)
+      if (key !== want) return json({ error: 'bad-key' }, 401)
       return await inbox(req)
     }
     return await fromApp(req)
