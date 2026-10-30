@@ -10,6 +10,7 @@ import { Org } from './pages/Org'
 import { Settings } from './pages/Settings'
 import { Performance } from './pages/Performance'
 import { Assistant } from './pages/Assistant'
+import { Meetings } from './pages/Meetings'
 import { FirstUpload, syncOn } from './components/Sync'
 import { useSync } from './lib/sync'
 
@@ -28,6 +29,7 @@ export default function App() {
           <Route index element={<Today />} />
           <Route path="assistant" element={<Assistant />} />
           <Route path="tasks" element={<Tasks />} />
+          <Route path="meetings" element={<Meetings />} />
           <Route path="attendance" element={<Attendance />} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="performance" element={<Performance />} />

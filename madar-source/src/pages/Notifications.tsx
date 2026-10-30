@@ -15,6 +15,7 @@ const KIND: Record<NotificationKind, { icon: string; color: string; label: strin
   status: { icon: 'check', color: '#34D399', label: 'تحديث' },
   attendance: { icon: 'pin', color: '#7DE3F4', label: 'حضور' },
   performance: { icon: 'chart', color: '#FBBF24', label: 'الأداء' },
+  meeting: { icon: 'mic', color: '#A78BFA', label: 'اجتماع' },
   system: { icon: 'sparkle', color: '#C4B5FD', label: 'النظام' },
 }
 

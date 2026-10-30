@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ask, useStore, useUI } from '../lib/store'
 import { canSeeTask, roleIn, useCompanyMap, useUserMap } from '../lib/access'
 import { dueLabel, fmtDay, fmtTime, PRIORITY_COLOR, PRIORITY_LABEL, REMIND_OPTIONS, STATUS_LABEL, STATUS_ORDER, uid, UNIT_LABEL } from '../lib/utils'
@@ -24,6 +25,8 @@ export function TaskDrawer() {
   const [editing, setEditing] = useState(false)
   const [comment, setComment] = useState('')
   const [newSub, setNewSub] = useState('')
+  const nav = useNavigate()
+  const meeting = useStore((s) => s.meetings.find((m) => m.id === task?.meetingId))
 
   if (!id || !task || !canSeeTask({ units, memberships }, me, task)) return null
 
@@ -68,6 +71,11 @@ export function TaskDrawer() {
         <div>
           <h2 style={{ fontSize: 22, lineHeight: 1.4 }}>{task.title}</h2>
           {task.description && <p className="soft" style={{ margin: '8px 0 0', whiteSpace: 'pre-wrap' }}>{task.description}</p>}
+          {meeting && (
+            <button className="btn ghost sm" style={{ marginTop: 8 }} onClick={() => { close(); nav(`/meetings?m=${meeting.id}`) }}>
+              <Icon name="mic" size={14} /> من اجتماع: {meeting.title}
+            </button>
+          )}
         </div>
 
         <div className="seg" role="group" aria-label="الحالة" style={{ alignSelf: 'flex-start', flexWrap: 'wrap' }}>

@@ -10,6 +10,7 @@ import type {
   Promotion,
   Comment,
   ID,
+  Meeting,
   Membership,
   OrgUnit,
   Task,
@@ -37,6 +38,7 @@ interface Data {
   ratings: MonthlyRating[]
   reviews: AnnualReview[]
   promotions: Promotion[]
+  meetings: Meeting[]
 }
 
 interface Session {
@@ -85,6 +87,10 @@ interface Actions {
   saveReview: (r: Omit<AnnualReview, 'id' | 'at'>) => void
   proposePromotion: (p: Omit<Promotion, 'id' | 'at' | 'status'>) => void
   decidePromotion: (id: ID, approve: boolean, deciderId: ID) => void
+
+  addMeeting: (m: Omit<Meeting, 'id'>) => ID
+  updateMeeting: (id: ID, patch: Partial<Meeting>) => void
+  removeMeeting: (id: ID) => void
 
   resetToSample: () => void
   startFresh: () => void
@@ -166,6 +172,7 @@ export const useStore = create<State>()(
             ratings: s.ratings.filter((r) => r.companyId !== id),
             reviews: s.reviews.filter((r) => r.companyId !== id),
             promotions: s.promotions.filter((p) => p.companyId !== id),
+            meetings: s.meetings.filter((m) => m.companyId !== id),
           })),
         rotateQr: (id) => get().updateCompany(id, { qrSecret: randomSecret() }),
 
@@ -344,6 +351,16 @@ export const useStore = create<State>()(
             push({ userId: p.proposedBy, companyId: p.companyId, kind: 'performance', title: approve ? `ترقية ${nameOf(p.userId)} اتعتمدت` : `ترقية ${nameOf(p.userId)} اترفضت`, body: p.toTitle })
         },
 
+        addMeeting: (m) => {
+          const id = uid('mt_')
+          set((s) => ({ meetings: [{ ...m, id }, ...s.meetings] }))
+          return id
+        },
+        updateMeeting: (id, patch) => set((s) => ({ meetings: s.meetings.map((m) => (m.id === id ? { ...m, ...patch } : m)) })),
+        // its tasks stay: they're real work now, they just lose the link back
+        removeMeeting: (id) =>
+          set((s) => ({ meetings: s.meetings.filter((m) => m.id !== id), tasks: s.tasks.map((t) => (t.meetingId === id ? { ...t, meetingId: undefined } : t)) })),
+
         resetToSample: () => set({ ...seedData() }),
         startFresh: () => {
           const s = get()
@@ -361,6 +378,7 @@ export const useStore = create<State>()(
             ratings: [],
             reviews: [],
             promotions: [],
+            meetings: [],
             currentUserId: me.id,
           })
         },

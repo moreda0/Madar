@@ -13,7 +13,7 @@ import { initialsOf, uid } from './utils'
  * over realtime and are merged back in. Last write wins per record.
  */
 
-export const COLLECTIONS = ['users', 'companies', 'units', 'memberships', 'tasks', 'notifications', 'attendance', 'kpis', 'ratings', 'reviews', 'promotions'] as const
+export const COLLECTIONS = ['users', 'companies', 'units', 'memberships', 'tasks', 'notifications', 'attendance', 'kpis', 'ratings', 'reviews', 'promotions', 'meetings'] as const
 type Kind = (typeof COLLECTIONS)[number]
 type Item = Record<string, unknown>
 interface Row { kind: Kind; id: string; data: Item; deleted: boolean; updated_at?: string }
@@ -406,3 +406,47 @@ export async function askOnline(messages: { role: 'user' | 'assistant'; text: st
 }
 
 export const onlineAssistantReady = () => !!getSyncConfig() && !assistantMissing
+
+/* ---------- meetings (supabase/functions/madar-meetings) ---------- */
+
+export interface MeetingDraft {
+  transcript: string
+  title: string
+  summary: string
+  decisions: string[]
+  points: string[]
+  tasks: { title: string; description: string; assigneeId: string | null; dueAt: string | null; priority: string }[]
+}
+
+/** Recording or text -> minutes + proposed tasks. Throws an Arabic message the page can show. */
+export async function processMeeting(input: { transcript?: string; audio?: File }, context: unknown): Promise<MeetingDraft> {
+  const c = getClient()
+  const st = useSync.getState()
+  if (!c || !st.email || st.role === 'not-invited') throw new Error('لازم المزامنة أونلاين تكون شغالة ومتسجلة دخول (من الإعدادات).')
+  if (!navigator.onLine) throw new Error('مفيش نت دلوقتي. الاجتماع متسجل عندك، جربي تاني لما النت يرجع.')
+  let body: FormData | object
+  if (input.audio) {
+    const f = new FormData()
+    f.append('audio', input.audio, input.audio.name || 'meeting.webm')
+    f.append('context', JSON.stringify(context))
+    body = f
+  } else body = { transcript: input.transcript, context }
+  const { data, error } = await c.functions.invoke('madar-meetings', { body })
+  if (error) {
+    const res = (error as { context?: Response }).context
+    const code = res ? ((await res.json().catch(() => ({}))) as { error?: string }).error : undefined
+    throw new Error(MEETING_ERRORS[code ?? ''] ?? (res?.status === 404 ? MEETING_ERRORS.missing : 'حصلت مشكلة، جربي تاني كمان شوية.'))
+  }
+  return data as MeetingDraft
+}
+
+const MEETING_ERRORS: Record<string, string> = {
+  missing: 'خدمة الاجتماعات لسه مش متركبة على السيرفر.',
+  'api-key': 'المساعد الذكي محتاج مفتاح Claude (ANTHROPIC_API_KEY) على السيرفر.',
+  'no-transcriber': 'رفع التسجيلات محتاج مفتاح خدمة تحويل الصوت لنص (TRANSCRIBE_API_KEY). لحد ما يتحط، سجّلي من جوه مدار أو الصقي النص.',
+  'too-big': 'الملف كبير أوي (أقصى حاجة 25 ميجا). قسميه أو صغّري جودته.',
+  'empty-audio': 'مش لاقية كلام واضح في التسجيل.',
+  'too-short': 'الكلام قليل أوي عشان يطلع منه محضر.',
+  'not-member': 'الإيميل ده مش متضاف في مدار.',
+  busy: 'الخدمة عليها ضغط، جربي بعد دقيقة.',
+}
