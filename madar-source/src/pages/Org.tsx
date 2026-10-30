@@ -262,6 +262,9 @@ function Team({ company, isAdmin }: { company: Company; isAdmin: boolean }) {
       <div className="muted" style={{ fontSize: 12, marginTop: 10 }}>
         مدير عام: بيشوف ويعدل كل حاجة في الشركة · مدير: بيشوف مهام وحدته واللي تحتها · موظف: بيشوف مهامه بس
       </div>
+      <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+        <Icon name="whatsapp" size={12} /> أي حد ليه رقم هنا بتوصله مهامه الجديدة والتذكيرات على واتساب لوحدها (بعد ربط رقم مدار)، والزرار الأخضر يبعتله مهامه من رقمك انتي.
+      </div>
 
       {adding && (
         <Overlay onClose={() => setAdding(false)} label="عضو جديد">

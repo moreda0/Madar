@@ -1,7 +1,8 @@
 // مدار: two-way WhatsApp (Supabase Edge Function "madar-whatsapp", JWT verification OFF).
 //
-//  POST {"tick":true}   every few minutes from Supabase Cron: creates due/overdue reminders (same ids the
-//                       app uses) and sends every new alert to people who turned WhatsApp on, with buttons.
+//  POST {"tick":true}   every minute from Supabase Cron: creates due/overdue reminders (same ids the
+//                       app uses) and sends every new alert (new task, reminder, late...) to everyone
+//                       with a phone in Madar who didn't turn WhatsApp off, with buttons.
 //  GET  ?hub.*          Meta's one-time webhook check (WA_VERIFY_TOKEN).
 //  POST from Meta       replies: button taps (خلصت / فكّريني بعد ساعة), and text like "مهامي" or "خلصت 2".
 //                       Free text goes to Claude when ANTHROPIC_API_KEY is set; anything it would change
@@ -122,11 +123,17 @@ async function tick() {
     await db.from('wa_snooze').update({ done: true }).eq('id', s.id)
   }
 
-  // outbox: fresh, unread alerts for people who turned WhatsApp on
-  const people = new Map(d.users.filter((u) => u.waOptIn && normPhone(u.phone).length >= 10).map((u) => [u.id, u]))
+  // nothing goes out (and nothing is marked sent) until the Meta number is connected
+  if (!env('WA_TOKEN') || !env('WA_PHONE_ID')) return { sent: 0, configured: false }
+
+  // outbox: fresh, unread alerts for everyone with a phone in Madar, unless they turned WhatsApp off.
+  // Someone who never touched the switch only gets alerts from the last 30 minutes, so the first run
+  // after connecting the number doesn't flood people with old ones.
+  const people = new Map(d.users.filter((u) => u.waOptIn !== false && normPhone(u.phone).length >= 10).map((u) => [u.id, u]))
   const fresh = d.notifications.filter((n) => {
     const u = people.get(n.userId)
-    return u && !n.read && now - new Date(n.at).getTime() < 6 * 3600e3 && (!u.waSince || n.at >= u.waSince)
+    const age = now - new Date(n.at).getTime()
+    return u && !n.read && age < 6 * 3600e3 && (u.waSince ? n.at >= u.waSince : age < 30 * 60e3)
   })
   if (!fresh.length) return { sent: 0 }
   const { data: sentRows } = await db.from('wa_sent').select('notification_id').in('notification_id', fresh.map((n) => n.id))
@@ -137,7 +144,9 @@ async function tick() {
     // claim first so two ticks never send the same alert
     const { error } = await db.from('wa_sent').insert({ notification_id: n.id, user_id: n.userId, task_id: n.taskId ?? null, phone })
     if (error) continue
-    const id = await sendAlert(phone, n)
+    const task = n.taskId ? d.tasks.find((t) => t.id === n.taskId) : undefined
+    // a new task goes out with its deadline, so they know when it's due without opening Madar
+    const id = await sendAlert(phone, n.kind === 'assigned' && task?.dueAt ? { ...n, body: `${n.body} · الميعاد: ${fmtWhen(task.dueAt)}` } : n)
     if (id) { count++; await db.from('wa_sent').update({ wa_id: id }).eq('notification_id', n.id) }
   }
   return { sent: count }
