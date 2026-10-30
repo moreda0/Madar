@@ -199,6 +199,14 @@ function findPerson(who: unknown, people: { id: string; name: string }[], users:
   return first.length === 1 ? first[0].id : null
 }
 
+/** A due date as ISO; a bare day ("2026-10-31") means end of that working day in Cairo */
+function dueOf(v: unknown): string | null {
+  const s = String(v ?? '').trim()
+  if (!s) return null
+  const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(s) ? `${s}T17:00:00+02:00` : s)
+  return isNaN(+d) ? null : d.toISOString()
+}
+
 /** Minutes the sender already wrote: {title, summary, points[], decisions[], tasks[{title, description, assignee, dueAt, priority}]} */
 function readyMinutes(r: Rec, people: { id: string; name: string }[], pool: Rec[], users: Rec[]): Minutes {
   const list = (v: unknown) => (Array.isArray(v) ? v.map((x) => String(x).trim()).filter(Boolean) : [])
@@ -212,8 +220,8 @@ function readyMinutes(r: Rec, people: { id: string; name: string }[], pool: Rec[
     tasks: (Array.isArray(r.tasks) ? r.tasks : []).filter((t: Rec) => String(t?.title ?? '').trim()).map((t: Rec) => ({
       title: String(t.title).trim(),
       description: String(t.description ?? ''),
-      assigneeId: findPerson(t.assignee ?? t.assigneeName ?? t.assigneePhone, people, users),
-      dueAt: t.dueAt && !isNaN(Date.parse(t.dueAt)) ? new Date(t.dueAt).toISOString() : null,
+      assigneeId: findPerson(t.assignee ?? t.assigneeName ?? t.assignee_name ?? t.assigneePhone ?? t.owner, people, users),
+      dueAt: dueOf(t.dueAt ?? t.due ?? t.deadline),
       priority: ['low', 'medium', 'high', 'urgent'].includes(t.priority) ? t.priority : 'medium',
     })),
   }
@@ -245,11 +253,14 @@ async function inbox(req: Request) {
     audioName = new URL(String(f.audio_url)).pathname.split('/').pop() || audioName
   }
   // the sender may have written the minutes itself (then no Claude key is needed here)
-  if (typeof f.minutes === 'string') { try { f.minutes = JSON.parse(f.minutes) } catch { throw new Fail('bad-minutes') } }
+  for (const k of ['minutes', 'tasks', 'points', 'decisions']) if (typeof f[k] === 'string' && /^\s*[[{]/.test(f[k])) { try { f[k] = JSON.parse(f[k]) } catch { throw new Fail(`bad-${k}`) } }
   // ...wrapped in "minutes", or sent as top-level fields
-  const ready = f.minutes && typeof f.minutes === 'object' ? f.minutes as Rec : Array.isArray(f.tasks) || f.summary ? f : null
+  let ready: Rec | null = f.minutes && typeof f.minutes === 'object' ? f.minutes as Rec : Array.isArray(f.tasks) || f.summary ? f : null
+  // tasks may sit next to "minutes" instead of inside it
+  if (ready && ready !== f && !(Array.isArray(ready.tasks) && ready.tasks.length) && Array.isArray(f.tasks)) ready = { ...ready, tasks: f.tasks }
   const transcript = audio && !ready ? await transcribe(audio, audioName) : String(f.transcript ?? f.text ?? '').trim()
   if (!transcript && !ready) throw new Fail('no-transcript')
+  console.log('inbox', JSON.stringify({ fields: Object.keys(f), minutes: !!ready, tasks: Array.isArray(ready?.tasks) ? ready!.tasks.length : 0 }))
 
   const [users, companies, memberships] = await Promise.all([load('users'), load('companies'), load('memberships')])
   // who sent it: by phone, else the workspace owner
