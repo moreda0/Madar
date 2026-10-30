@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { ask, useStore, useUI } from '../lib/store'
 import { useMe } from '../lib/access'
 import { requestSystemNotifications } from '../lib/reminders'
+import { enablePush, pushState, type PushState } from '../lib/push'
+import { playRing, ringOn, setRingOn } from '../lib/ring'
 import { initialsOf } from '../lib/utils'
 import { Avatar } from '../components/ui'
 import { Icon } from '../components/Icon'
@@ -35,6 +37,9 @@ export function Settings() {
   const [name, setName] = useState(me.name)
   const [phone, setPhone] = useState(me.phone ?? '')
   const [perm, setPerm] = useState<string>(() => ('Notification' in window ? Notification.permission : 'unsupported'))
+  const [push, setPush] = useState<PushState | null>(null)
+  const [ring, setRing] = useState(ringOn)
+  useEffect(() => { pushState().then(setPush) }, [])
   const [canInstall, setCanInstall] = useState(!!deferredInstall)
   const standalone = window.matchMedia?.('(display-mode: standalone)').matches
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
@@ -105,6 +110,44 @@ export function Settings() {
             <div className="soft" style={{ fontSize: 13 }}>{perm === 'granted' ? 'شغالة' : perm === 'denied' ? 'مقفولة من إعدادات المتصفح' : perm === 'unsupported' ? 'المتصفح ده مش بيدعمها' : 'مش متفعلة'}</div>
           </div>
           {perm === 'default' && <button className="btn" onClick={async () => setPerm(await requestSystemNotifications())}>فعّلي</button>}
+        </div>
+        {push && push !== 'needs-sync' && (
+          <div className="row wrap">
+            <Icon name="bell" />
+            <div style={{ flex: 1, minWidth: 180 }}>
+              <div style={{ fontWeight: 600 }}>الإشعارات والتطبيق مقفول</div>
+              <div className="soft" style={{ fontSize: 13 }}>
+                {push === 'on' ? 'شغالة على الجهاز ده: المهام الجديدة والتذكيرات توصلك حتى لو مدار مقفول'
+                  : push === 'needs-install' ? 'على الآيفون: ثبّتي مدار على الشاشة الرئيسية الأول (فوق)، وافتحيه من هناك وارجعي هنا'
+                  : push === 'denied' ? 'الإشعارات مقفولة لمدار من إعدادات المتصفح أو الموبايل، افتحيها من هناك'
+                  : push === 'unsupported' ? 'المتصفح ده مش بيدعمها، جربي Chrome' : 'مش متفعلة على الجهاز ده'}
+              </div>
+            </div>
+            {push === 'off' && (
+              <button className="btn primary" onClick={async () => {
+                const st = await enablePush()
+                setPush(st); setPerm('Notification' in window ? Notification.permission : 'unsupported')
+                toast(st === 'on' ? { title: 'تمام، الإشعارات هتوصلك والتطبيق مقفول', tone: 'ok' } : { title: 'مقدرناش نفعّلها', body: 'اسمحي بالإشعارات لمدار وجربي تاني', tone: 'warn' })
+              }}>فعّلي</button>
+            )}
+          </div>
+        )}
+        <div className="divider" style={{ margin: 0 }} />
+        <div className="row wrap">
+          <Icon name="sparkle" />
+          <div style={{ flex: 1, minWidth: 180 }}>
+            <div style={{ fontWeight: 600 }}>رنة مدار</div>
+            <div className="soft" style={{ fontSize: 13 }}>نغمة خاصة بمدار، مختلفة للمهمة الجديدة والتذكير والمتأخر</div>
+          </div>
+          <div className="row" style={{ gap: 6 }}>
+            <button className="btn sm" onClick={() => playRing('assigned', true)}>مهمة جديدة</button>
+            <button className="btn sm" onClick={() => playRing('reminder', true)}>تذكير</button>
+            <button className="btn sm" onClick={() => playRing('overdue', true)}>متأخرة</button>
+          </div>
+          <label className="row" style={{ gap: 8, cursor: 'pointer' }}>
+            <input type="checkbox" checked={ring} onChange={(e) => { setRingOn(e.target.checked); setRing(e.target.checked); if (e.target.checked) playRing('assigned', true) }} style={{ width: 20, height: 20, accentColor: 'var(--cyan)' }} />
+            <span>شغالة</span>
+          </label>
         </div>
       </div>
 
