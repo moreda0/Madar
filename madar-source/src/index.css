@@ -159,6 +159,8 @@ h3 { font-size: 16px; }
 .btn.ghost { background: transparent; border-color: transparent; color: var(--soft); }
 .btn.ghost:hover { background: var(--panel); }
 .btn.danger { color: var(--rose); border-color: rgba(253, 164, 175, 0.35); background: rgba(244, 114, 182, 0.08); }
+.btn.wa { color: #6EE7B7; border-color: rgba(52, 211, 153, 0.35); background: rgba(52, 211, 153, 0.10); text-decoration: none; }
+.btn.wa:hover { background: rgba(52, 211, 153, 0.18); }
 .btn.sm { min-height: 36px; padding: 0 12px; font-size: 13px; border-radius: 12px; }
 .btn.icon { padding: 0; width: 44px; }
 .btn.icon.sm { width: 36px; }

@@ -3,6 +3,7 @@ import { ask, useStore, useUI } from '../lib/store'
 import { roleIn, useMyCompanies, useUserMap } from '../lib/access'
 import type { Company, ID, OrgUnit, Role, UnitType } from '../lib/types'
 import { COMPANY_COLORS, hexA, initialsOf, ROLE_LABEL, UNIT_LABEL } from '../lib/utils'
+import { openTasksMessage, waLink, waNumber } from '../lib/whatsapp'
 import { Avatar, Empty, Overlay } from '../components/ui'
 import { Icon } from '../components/Icon'
 
@@ -208,7 +209,7 @@ function Team({ company, isAdmin }: { company: Company; isAdmin: boolean }) {
       </div>
       <div className="tbl-wrap">
         <table className="tbl">
-          <thead><tr><th>الاسم</th>{isAdmin && <th>الإيميل (للدخول)</th>}<th>المسمى</th><th>الصلاحية</th><th>تابع لـ</th><th>مهام مفتوحة</th>{isAdmin && <th><span className="sr-only">إجراءات</span></th>}</tr></thead>
+          <thead><tr><th>الاسم</th>{isAdmin && <th>الإيميل (للدخول)</th>}<th>واتساب</th><th>المسمى</th><th>الصلاحية</th><th>تابع لـ</th><th>مهام مفتوحة</th>{isAdmin && <th><span className="sr-only">إجراءات</span></th>}</tr></thead>
           <tbody>
             {memberships.map((m) => {
               const u = users[m.userId]
@@ -219,6 +220,17 @@ function Team({ company, isAdmin }: { company: Company; isAdmin: boolean }) {
                   {isAdmin && (
                     <td><input className="input num" dir="ltr" type="email" style={{ minHeight: 36, padding: '6px 10px', minWidth: 190 }} key={u?.email ?? ''} defaultValue={u?.email ?? ''} placeholder="name@mail.com" onBlur={(e) => { const v = e.target.value.trim().toLowerCase() || undefined; if (v !== u?.email) updateUser(m.userId, { email: v }) }} aria-label={`إيميل ${u?.name}`} /></td>
                   )}
+                  <td>
+                    <span className="row" style={{ gap: 6, flexWrap: 'nowrap' }}>
+                      {isAdmin && <input className="input num" dir="ltr" inputMode="tel" style={{ minHeight: 36, padding: '6px 10px', minWidth: 130 }} key={u?.phone ?? ''} defaultValue={u?.phone ?? ''} placeholder="01xxxxxxxxx" onBlur={(e) => { const v = e.target.value.trim() || undefined; if (v !== u?.phone) updateUser(m.userId, { phone: v }) }} aria-label={`موبايل ${u?.name}`} />}
+                      {!isAdmin && !waNumber(u?.phone) && <span className="muted">—</span>}
+                      {m.userId !== me && waNumber(u?.phone) && (
+                        <a className="btn wa icon sm" href={waLink(u?.phone, openTasksMessage(u, tasks.filter((t) => t.companyId === company.id && t.assigneeId === m.userId), company))} target="_blank" rel="noreferrer" aria-label={`ابعتي لـ ${u?.name} مهامه على واتساب`} title="ابعتيله مهامه المفتوحة على واتساب">
+                          <Icon name="whatsapp" size={16} />
+                        </a>
+                      )}
+                    </span>
+                  </td>
                   <td>
                     {isAdmin ? <input className="input" style={{ minHeight: 36, padding: '6px 10px' }} value={m.title ?? ''} placeholder="—" onChange={(e) => upsert({ ...m, title: e.target.value })} aria-label="المسمى" /> : m.title ?? '—'}
                   </td>
@@ -280,7 +292,7 @@ function Team({ company, isAdmin }: { company: Company; isAdmin: boolean }) {
               <>
                 <label className="field"><span>الاسم</span><input className="input" value={name} onChange={(e) => setName(e.target.value)} autoFocus /></label>
                 <label className="field"><span>الإيميل (هيدخل بيه مدار)</span><input className="input num" type="email" dir="ltr" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@mail.com" /></label>
-                <label className="field"><span>رقم الموبايل (للواتساب بعدين)</span><input className="input num" inputMode="tel" dir="ltr" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+20 1xx xxx xxxx" /></label>
+                <label className="field"><span>رقم الموبايل (للواتساب)</span><input className="input num" inputMode="tel" dir="ltr" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+20 1xx xxx xxxx" /></label>
               </>
             )}
             <label className="field"><span>الصلاحية</span>

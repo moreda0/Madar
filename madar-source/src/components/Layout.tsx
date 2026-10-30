@@ -1,4 +1,5 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useStore, useUI } from '../lib/store'
 import { useMe, useMyCompanies } from '../lib/access'
 import { Avatar, CompanyChips, ConfirmDialog, Toasts, useUnreadCount } from './ui'
@@ -42,6 +43,14 @@ export function Layout() {
   const openNewTask = useUI((s) => s.openNewTask)
   const openTaskId = useUI((s) => s.openTaskId)
   const loc = useLocation()
+  const nav = useNavigate()
+  // #/tasks?t=<id> (the link inside WhatsApp messages) opens that task
+  const linkedTask = new URLSearchParams(loc.search).get('t')
+  useEffect(() => {
+    if (!linkedTask) return
+    useUI.getState().openTask(linkedTask)
+    nav(loc.pathname, { replace: true })
+  }, [linkedTask, loc.pathname, nav])
   const myRoles = memberships.filter((m) => m.userId === me?.id)
   const topRole = myRoles.some((m) => m.role === 'admin') ? 'admin' : myRoles.some((m) => m.role === 'manager') ? 'manager' : 'employee'
 

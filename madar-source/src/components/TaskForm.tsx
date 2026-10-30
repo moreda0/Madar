@@ -5,6 +5,7 @@ import type { Priority, Task, TaskStatus } from '../lib/types'
 import { fromLocalInput, PRIORITY_LABEL, REMIND_OPTIONS, STATUS_LABEL, STATUS_ORDER, toLocalInput, uid, UNIT_LABEL } from '../lib/utils'
 import { Overlay } from './ui'
 import { Icon } from './Icon'
+import { waNumber } from '../lib/whatsapp'
 
 const defaultDue = () => {
   const d = new Date()
@@ -48,9 +49,13 @@ export function NewTaskModal() {
         submitLabel="ضيفي المهمة"
         onCancel={close}
         onSubmit={(t) => {
-          addTask(t, me)
-          toast({ title: 'اتضافت المهمة', body: t.title, tone: 'ok' })
+          const id = addTask(t, me)
+          const assignee = useStore.getState().users.find((u) => u.id === t.assigneeId)
+          const viaWa = t.assigneeId !== me && !!waNumber(assignee?.phone)
+          toast({ title: 'اتضافت المهمة', body: viaWa ? `ابعتيها لـ ${assignee!.name} على واتساب من الزرار الأخضر` : t.title, tone: 'ok' })
           close()
+          // straight to the task so the WhatsApp button is one tap away
+          if (viaWa) useUI.getState().openTask(id)
         }}
       />
     </Overlay>

@@ -7,6 +7,7 @@ import { Avatar, CompanyTag, Overlay } from './ui'
 import { TaskEditor } from './TaskForm'
 import { Icon } from './Icon'
 import { Stars } from '../pages/Performance'
+import { taskMessage, waLink, waNumber } from '../lib/whatsapp'
 
 export function TaskDrawer() {
   const id = useUI((s) => s.openTaskId)
@@ -38,6 +39,7 @@ export function TaskDrawer() {
   const due = dueLabel(task.dueAt)
   const subDone = task.subtasks.filter((s) => s.done).length
   const company = companies[task.companyId]
+  const assignee = users[task.assigneeId ?? '']
 
   if (editing)
     return (
@@ -101,6 +103,19 @@ export function TaskDrawer() {
           <Info label="أنشأها">{users[task.creatorId]?.name ?? '—'}</Info>
           {task.completedAt && <Info label="خلصت">{fmtDay(task.completedAt)} · <span className="num">{fmtTime(task.completedAt)}</span></Info>}
         </div>
+
+        {assignee && assignee.id !== me && (
+          waNumber(assignee.phone) ? (
+            <a className="btn wa" href={waLink(assignee.phone, taskMessage(task, assignee, company))} target="_blank" rel="noreferrer">
+              <Icon name="whatsapp" size={18} /> ابعتيها لـ {assignee.name} على واتساب
+            </a>
+          ) : canEdit && (
+            <div className="muted" style={{ fontSize: 13 }}>
+              <Icon name="whatsapp" size={14} /> عشان تبعتيها لـ {assignee.name} على واتساب، ضيفي رقمه من{' '}
+              <button className="btn ghost sm" onClick={() => { close(); nav('/org') }}>الهيكل التنظيمي</button>
+            </div>
+          )
+        )}
 
         {task.status === 'done' && (task.rating || canRate) && (
           <section className="card row wrap" style={{ padding: 14, justifyContent: 'space-between' }}>
