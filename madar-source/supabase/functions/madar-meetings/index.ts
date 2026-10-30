@@ -7,6 +7,8 @@
 //
 //  Inbox, for outside senders such as the Instinct WhatsApp assistant (header x-madar-key: MEETINGS_INBOX_KEY):
 //    JSON {transcript | audio_url | audio_base64 (+mime), title?, company?, from_phone?, at?}  or  multipart {audio, ...same fields}
+//    or, when the sender wrote the minutes itself (no Claude key needed):
+//    JSON {minutes: {title, summary, points[], decisions[], tasks[{title, description, assignee (name/phone/email), dueAt (ISO), priority}]}, transcript?, from_phone?, company?}
 //    -> saves the meeting and its tasks straight into Madar (each task lands on its person, who gets an alert)
 //       and answers {ok, meetingId, minutes (ready-to-send text), tasks, link}.
 //
@@ -93,7 +95,12 @@ const SCHEMA = {
 interface Ctx { now?: string; timezone?: string; companies?: { id: string; name: string }[]; people?: { id: string; name: string; title?: string; companies?: string[] }[] }
 interface Minutes { title: string; summary: string; points: string[]; decisions: string[]; companyId: string | null; tasks: { title: string; description: string; assigneeId: string | null; dueAt: string | null; priority: string }[] }
 
-const anthropic = new Anthropic() // reads ANTHROPIC_API_KEY
+// made on first use: the client throws without ANTHROPIC_API_KEY, and ready-made minutes don't need it
+let client: Anthropic | null = null
+const anthropic = () => {
+  if (!env('ANTHROPIC_API_KEY')) throw new Fail('api-key', 500)
+  return (client ??= new Anthropic())
+}
 
 async function minutesOf(transcript: string, ctx: Ctx): Promise<Minutes> {
   if (transcript.replace(/\s+/g, ' ').trim().length < 20) throw new Fail('too-short')
@@ -108,7 +115,7 @@ async function minutesOf(transcript: string, ctx: Ctx): Promise<Minutes> {
 ${transcript.slice(0, 150000)}
 </transcript>`
   try {
-    const res = await anthropic.beta.messages.create({
+    const res = await anthropic().beta.messages.create({
       model: 'claude-opus-5-5',
       max_tokens: 8000,
       betas: ['server-side-fallback-2026-07-01'],
@@ -173,6 +180,45 @@ function minutesText(m: Minutes, names: Record<string, string>, company?: string
   return lines.filter((l, i) => l !== '' || lines[i - 1] !== '').join('\n').trim()
 }
 
+/** Arabic-insensitive name key: no diacritics, one alef/yaa/taa marbuta form, no spaces */
+const nameKey = (s: string) => String(s ?? '').replace(/[\u064B-\u0652\u0640]/g, '').replace(/[أإآ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه').replace(/\s+/g, ' ').trim().toLowerCase()
+
+/** Who a sender meant by "assignee": a phone, an email, a full name, or a unique first name */
+function findPerson(who: unknown, people: { id: string; name: string }[], users: Rec[]): string | null {
+  const w = String(who ?? '').trim()
+  if (!w) return null
+  const ids = new Set(people.map((p) => p.id))
+  const byPhone = normPhone(w).length >= 10 ? users.find((u) => ids.has(u.id) && normPhone(u.phone) === normPhone(w)) : undefined
+  if (byPhone) return byPhone.id
+  const byMail = users.find((u) => ids.has(u.id) && u.email && u.email.toLowerCase() === w.toLowerCase())
+  if (byMail) return byMail.id
+  const k = nameKey(w)
+  const full = people.find((p) => nameKey(p.name) === k)
+  if (full) return full.id
+  const first = people.filter((p) => nameKey(p.name).split(' ')[0] === k.split(' ')[0])
+  return first.length === 1 ? first[0].id : null
+}
+
+/** Minutes the sender already wrote: {title, summary, points[], decisions[], tasks[{title, description, assignee, dueAt, priority}]} */
+function readyMinutes(r: Rec, people: { id: string; name: string }[], pool: Rec[], users: Rec[]): Minutes {
+  const list = (v: unknown) => (Array.isArray(v) ? v.map((x) => String(x).trim()).filter(Boolean) : [])
+  const want = nameKey(r.company ?? '')
+  return {
+    title: String(r.title ?? 'اجتماع').slice(0, 200),
+    summary: String(r.summary ?? ''),
+    points: list(r.points),
+    decisions: list(r.decisions),
+    companyId: (want && pool.find((c) => [c.name, c.short].some((x) => nameKey(x) === want))?.id) || null,
+    tasks: (Array.isArray(r.tasks) ? r.tasks : []).filter((t: Rec) => String(t?.title ?? '').trim()).map((t: Rec) => ({
+      title: String(t.title).trim(),
+      description: String(t.description ?? ''),
+      assigneeId: findPerson(t.assignee ?? t.assigneeName ?? t.assigneePhone, people, users),
+      dueAt: t.dueAt && !isNaN(Date.parse(t.dueAt)) ? new Date(t.dueAt).toISOString() : null,
+      priority: ['low', 'medium', 'high', 'urgent'].includes(t.priority) ? t.priority : 'medium',
+    })),
+  }
+}
+
 async function inbox(req: Request) {
   const ct = req.headers.get('content-type') ?? ''
   let f: Rec = {}
@@ -198,8 +244,11 @@ async function inbox(req: Request) {
     audio = await r.blob()
     audioName = new URL(String(f.audio_url)).pathname.split('/').pop() || audioName
   }
-  const transcript = audio ? await transcribe(audio, audioName) : String(f.transcript ?? f.text ?? '').trim()
-  if (!transcript) throw new Fail('no-transcript')
+  // the sender may have written the minutes itself (then no Claude key is needed here)
+  if (typeof f.minutes === 'string') { try { f.minutes = JSON.parse(f.minutes) } catch { throw new Fail('bad-minutes') } }
+  const ready = f.minutes && typeof f.minutes === 'object' ? f.minutes as Rec : null
+  const transcript = audio && !ready ? await transcribe(audio, audioName) : String(f.transcript ?? f.text ?? '').trim()
+  if (!transcript && !ready) throw new Fail('no-transcript')
 
   const [users, companies, memberships] = await Promise.all([load('users'), load('companies'), load('memberships')])
   // who sent it: by phone, else the workspace owner
@@ -219,7 +268,7 @@ async function inbox(req: Request) {
     .filter((u) => memberships.some((m) => m.userId === u.id && pool.some((c) => c.id === m.companyId)))
     .map((u) => ({ id: u.id, name: u.name, title: memberships.find((m) => m.userId === u.id && pool.some((c) => c.id === m.companyId))?.title, companies: memberships.filter((m) => m.userId === u.id).map((m) => m.companyId) }))
 
-  const m = await minutesOf(transcript, { now: f.at ?? undefined, companies: pool.map((c) => ({ id: c.id, name: c.name })), people })
+  const m = ready ? readyMinutes(ready, people, pool, users) : await minutesOf(transcript, { now: f.at ?? undefined, companies: pool.map((c) => ({ id: c.id, name: c.name })), people })
   const company = pool.find((c) => c.id === m.companyId) ?? pool[0]
   // someone outside the chosen company can't hold its tasks
   const inCompany = new Set(memberships.filter((x) => x.companyId === company.id).map((x) => x.userId))
