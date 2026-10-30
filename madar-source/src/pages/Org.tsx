@@ -263,7 +263,7 @@ function Team({ company, isAdmin }: { company: Company; isAdmin: boolean }) {
         مدير عام: بيشوف ويعدل كل حاجة في الشركة · مدير: بيشوف مهام وحدته واللي تحتها · موظف: بيشوف مهامه بس
       </div>
       <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
-        <Icon name="whatsapp" size={12} /> أي حد ليه رقم هنا بتوصله مهامه الجديدة والتذكيرات على واتساب لوحدها (بعد ربط رقم مدار)، والزرار الأخضر يبعتله مهامه من رقمك انتي.
+        <Icon name="whatsapp" size={12} /> الزرار الأخضر جنب أي حد ليه رقم بيبعتله مهامه المفتوحة واتساب من رقمك انتي.
       </div>
 
       {adding && (
