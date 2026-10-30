@@ -65,7 +65,7 @@ export function playRing(style: RingStyle = 'assigned', force = false) {
   const c = audio()
   if (!c) return
   const master = c.createGain()
-  master.gain.value = 0.9
+  master.gain.value = 2.6 // the bells peak around 0.3, so this lands them near full volume without clipping
   // a little echo gives it space without sounding like a phone's stock tone
   const echo = c.createDelay(), fb = c.createGain(), wet = c.createGain()
   echo.delayTime.value = 0.17; fb.gain.value = 0.28; wet.gain.value = 0.35
