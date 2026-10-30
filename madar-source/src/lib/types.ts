@@ -85,6 +85,7 @@ export interface Task {
   completedAt?: string
   rating?: number // 1..5 quality rating given when the task is done
   ratedBy?: ID
+  meetingId?: ID // came out of a meeting's minutes
 }
 
 export type NotificationKind =
@@ -95,6 +96,7 @@ export type NotificationKind =
   | 'status'
   | 'attendance'
   | 'performance'
+  | 'meeting'
   | 'system'
 
 export interface AppNotification {
@@ -192,4 +194,25 @@ export interface Promotion {
   decidedBy?: ID
   decidedAt?: string
   at: string
+}
+
+/* ---------- meetings: recording -> minutes + tasks ---------- */
+
+/** live = recorded in Madar, upload = an audio file, text = pasted notes/transcript, whatsapp = sent in from outside (Instinct) */
+export type MeetingSource = 'live' | 'upload' | 'text' | 'whatsapp'
+
+export interface Meeting {
+  id: ID
+  companyId: ID
+  title: string
+  at: string // when it happened
+  durationMin?: number
+  source: MeetingSource
+  attendeeIds: ID[]
+  transcript: string
+  summary: string
+  decisions: string[]
+  points: string[] // what was discussed
+  taskIds: ID[]
+  createdBy: ID
 }

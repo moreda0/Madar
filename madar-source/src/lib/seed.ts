@@ -192,5 +192,5 @@ export function buildSeed() {
   const firedReminders: Record<string, true> = {}
   tasks.filter((x) => x.dueAt && new Date(x.dueAt) < now).forEach((x) => { firedReminders[`late:${x.id}`] = true; firedReminders[`rem:${x.id}`] = true })
 
-  return { users, companies, units, memberships, tasks, notifications, attendance, firedReminders, kpis, ratings, reviews: [] as import('./types').AnnualReview[], promotions }
+  return { users, companies, units, memberships, tasks, notifications, attendance, firedReminders, kpis, ratings, reviews: [] as import('./types').AnnualReview[], promotions, meetings: [] as import('./types').Meeting[] }
 }
