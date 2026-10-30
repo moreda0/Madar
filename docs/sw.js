@@ -1,5 +1,5 @@
-// مدار service worker: app shell cache so it opens offline, plus notification clicks.
-const CACHE = 'madar-v9'
+// مدار service worker: app shell cache so it opens offline, push notifications, notification clicks.
+const CACHE = 'madar-v10'
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', './index.html', './manifest.webmanifest', './icons/icon-192.png'])))
@@ -26,10 +26,32 @@ self.addEventListener('fetch', (e) => {
   }
 })
 
+// pushed from the madar-push function: {title, body, tag, taskId, kind}
+// Madar's own vibration: a short orbit (three taps then a long one); late tasks buzz harder
+const VIBRATE = { assigned: [90, 70, 90, 70, 90, 70, 320], reminder: [120, 90, 120], overdue: [300, 120, 300, 120, 300] }
+self.addEventListener('push', (e) => {
+  let d = {}
+  try { d = e.data ? e.data.json() : {} } catch { d = { title: 'مدار', body: e.data ? e.data.text() : '' } }
+  e.waitUntil(self.registration.showNotification(d.title || 'مدار', {
+    body: d.body || '',
+    tag: d.tag,
+    renotify: true,
+    icon: './icons/icon-192.png',
+    badge: './icons/icon-192.png',
+    dir: 'rtl',
+    lang: 'ar',
+    vibrate: VIBRATE[d.kind] || [120, 80, 120],
+    requireInteraction: d.kind === 'overdue' || d.kind === 'assigned',
+    data: { url: d.taskId ? `./#/tasks?t=${d.taskId}` : './#/notifications' },
+  }))
+})
+
 self.addEventListener('notificationclick', (e) => {
   e.notification.close()
+  const url = (e.notification.data && e.notification.data.url) || './#/notifications'
   e.waitUntil(self.clients.matchAll({ type: 'window' }).then((list) => {
     const open = list.find((c) => 'focus' in c)
-    return open ? open.focus() : self.clients.openWindow('./#/notifications')
+    if (open) return open.navigate ? open.navigate(url).then((c) => (c || open).focus()) : open.focus()
+    return self.clients.openWindow(url)
   }))
 })

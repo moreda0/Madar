@@ -8,6 +8,8 @@ import { Icon } from './Icon'
 import { TaskDrawer } from './TaskDrawer'
 import { NewTaskModal } from './TaskForm'
 import { useReminderEngine } from '../lib/reminders'
+import { enablePush } from '../lib/push'
+import { useSync } from '../lib/sync'
 import { ROLE_LABEL } from '../lib/utils'
 
 const NAV = [
@@ -45,6 +47,9 @@ export function Layout() {
   const loc = useLocation()
   const nav = useNavigate()
   // #/tasks?t=<id> (the link inside WhatsApp messages) opens that task
+  // once signed in, keep this device's closed-app notifications registered (never prompts)
+  const signedIn = useSync((s) => s.status === 'synced' || s.status === 'saving')
+  useEffect(() => { if (signedIn) enablePush(true) }, [signedIn])
   const linkedTask = new URLSearchParams(loc.search).get('t')
   useEffect(() => {
     if (!linkedTask) return

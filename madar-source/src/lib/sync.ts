@@ -78,7 +78,7 @@ function savePending() {
   setStatus({ pending: pending.size })
 }
 
-function getClient(): SupabaseClient | null {
+export function getClient(): SupabaseClient | null {
   const cfg = getSyncConfig()
   if (!cfg) return null
   if (!client) client = createClient(cfg.url, cfg.key, { auth: { persistSession: true, autoRefreshToken: true, storageKey: 'madar-auth' } })

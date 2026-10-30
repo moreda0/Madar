@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useStore, useUI } from './store'
+import { playRing, ringFor } from './ring'
 
 /** Ask once for permission to show system notifications */
 export async function requestSystemNotifications(): Promise<NotificationPermission | 'unsupported'> {
@@ -80,6 +81,8 @@ export function useReminderEngine() {
     const fresh = mine.filter((n) => !seen.current!.has(n.id))
     fresh.forEach((n) => seen.current!.add(n.id))
     const unread = fresh.filter((n) => !n.read)
+    // one ring per batch, the most urgent kind wins
+    if (unread.length) playRing(unread.some((n) => n.kind === 'overdue') ? 'overdue' : unread.some((n) => n.kind === 'assigned') ? 'assigned' : ringFor(unread[0].kind))
     if (unread.length > 2) {
       // a burst (e.g. first open after a while): one summary instead of a wall of popups
       toast({ title: `عندك ${unread.length} تنبيهات جديدة`, body: unread[0].body, tone: 'warn' })
