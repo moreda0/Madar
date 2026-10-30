@@ -121,7 +121,7 @@ export function Settings() {
             </p>
             {!me.phone && <p style={{ margin: 0, color: 'var(--amber)', fontSize: 14 }}>اكتبي رقم موبايلك فوق واحفظي الأول.</p>}
             <label className="row" style={{ gap: 10, cursor: me.phone ? 'pointer' : 'not-allowed', opacity: me.phone ? 1 : 0.5 }}>
-              <input type="checkbox" disabled={!me.phone} checked={!!me.waOptIn} onChange={(e) => { updateUser(me.id, { waOptIn: e.target.checked, waSince: e.target.checked ? new Date().toISOString() : me.waSince }); toast({ title: e.target.checked ? 'هتوصلك التنبيهات على واتساب' : 'وقفنا تنبيهات واتساب', tone: 'ok' }) }} style={{ width: 20, height: 20, accentColor: 'var(--green)' }} />
+              <input type="checkbox" disabled={!me.phone} checked={!!me.phone && me.waOptIn !== false} onChange={(e) => { updateUser(me.id, { waOptIn: e.target.checked, waSince: e.target.checked ? new Date().toISOString() : me.waSince }); toast({ title: e.target.checked ? 'هتوصلك التنبيهات على واتساب' : 'وقفنا تنبيهات واتساب', tone: 'ok' }) }} style={{ width: 20, height: 20, accentColor: 'var(--green)' }} />
               <span style={{ fontWeight: 600 }}>ابعتيلي التنبيهات على واتساب</span>
             </label>
           </>
