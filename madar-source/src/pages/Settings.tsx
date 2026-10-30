@@ -137,7 +137,7 @@ export function Settings() {
           <Icon name="sparkle" />
           <div style={{ flex: 1, minWidth: 180 }}>
             <div style={{ fontWeight: 600 }}>رنة مدار</div>
-            <div className="soft" style={{ fontSize: 13 }}>نغمة خاصة بمدار، مختلفة للمهمة الجديدة والتذكير والمتأخر</div>
+            <div className="soft" style={{ fontSize: 13 }}>فرخة بتصرخ للمهمة الجديدة، بطة للتذكير، وترومبون حزين للمتأخر</div>
           </div>
           <div className="row" style={{ gap: 6 }}>
             <button className="btn sm" onClick={() => playRing('assigned', true)}>مهمة جديدة</button>
