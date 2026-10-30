@@ -246,7 +246,8 @@ async function inbox(req: Request) {
   }
   // the sender may have written the minutes itself (then no Claude key is needed here)
   if (typeof f.minutes === 'string') { try { f.minutes = JSON.parse(f.minutes) } catch { throw new Fail('bad-minutes') } }
-  const ready = f.minutes && typeof f.minutes === 'object' ? f.minutes as Rec : null
+  // ...wrapped in "minutes", or sent as top-level fields
+  const ready = f.minutes && typeof f.minutes === 'object' ? f.minutes as Rec : Array.isArray(f.tasks) || f.summary ? f : null
   const transcript = audio && !ready ? await transcribe(audio, audioName) : String(f.transcript ?? f.text ?? '').trim()
   if (!transcript && !ready) throw new Fail('no-transcript')
 
