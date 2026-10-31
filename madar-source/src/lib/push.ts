@@ -4,7 +4,7 @@
 import { getClient, getSyncConfig } from './sync'
 
 /** flips on once supabase/push.sql and the madar-push function are live on the server */
-export const PUSH_LIVE = false
+export const PUSH_LIVE = true
 
 const VAPID_PUBLIC = 'BHUzRDOyP0IEV4Pmxk6xKs4U_Ln8BGw2BsXe4ZGvQ6P__T1tPUyfdg1-UITLJNwah0ldTrmfnUbzskVMhJ7zzrM'
 
