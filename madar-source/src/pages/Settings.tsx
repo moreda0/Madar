@@ -4,7 +4,7 @@ import { ask, useStore, useUI } from '../lib/store'
 import { useMe } from '../lib/access'
 import { requestSystemNotifications } from '../lib/reminders'
 import { enablePush, pushState, type PushState } from '../lib/push'
-import { playRing, ringOn, setRingOn } from '../lib/ring'
+import { CUSTOM, SOUND_GROUPS, getPicks, hasCustom, playRing, playSound, ringOn, setCustom, setPick, setRingOn, type PickStyle } from '../lib/ring'
 import { initialsOf } from '../lib/utils'
 import { Avatar } from '../components/ui'
 import { Icon } from '../components/Icon'
@@ -137,18 +137,20 @@ export function Settings() {
           <Icon name="sparkle" />
           <div style={{ flex: 1, minWidth: 180 }}>
             <div style={{ fontWeight: 600 }}>رنة مدار</div>
-            <div className="soft" style={{ fontSize: 13 }}>فرخة بتصرخ للمهمة الجديدة، بطة للتذكير، وترومبون حزين للمتأخر</div>
-          </div>
-          <div className="row" style={{ gap: 6 }}>
-            <button className="btn sm" onClick={() => playRing('assigned', true)}>مهمة جديدة</button>
-            <button className="btn sm" onClick={() => playRing('reminder', true)}>تذكير</button>
-            <button className="btn sm" onClick={() => playRing('overdue', true)}>متأخرة</button>
+            <div className="soft" style={{ fontSize: 13 }}>اختاري صوت لكل نوع إشعار، أو ارفعي صوت من عندك</div>
           </div>
           <label className="row" style={{ gap: 8, cursor: 'pointer' }}>
             <input type="checkbox" checked={ring} onChange={(e) => { setRingOn(e.target.checked); setRing(e.target.checked); if (e.target.checked) playRing('assigned', true) }} style={{ width: 20, height: 20, accentColor: 'var(--cyan)' }} />
             <span>شغالة</span>
           </label>
         </div>
+        {ring && (
+          <div className="stack" style={{ gap: 10 }}>
+            <RingPicker style="assigned" label="مهمة جديدة" />
+            <RingPicker style="reminder" label="تذكير" />
+            <RingPicker style="overdue" label="متأخرة" />
+          </div>
+        )}
       </div>
 
       <SyncCard />
@@ -195,6 +197,38 @@ export function Settings() {
           </div>
         ))}
       </div>
+    </div>
+  )
+}
+
+function RingPicker({ style, label }: { style: PickStyle; label: string }) {
+  const toast = useUI((s) => s.toast)
+  const [pick, setPickState] = useState(() => getPicks()[style])
+  const [custom, setCustomState] = useState(() => hasCustom(style))
+  const choose = (id: string) => { setPick(style, id); setPickState(id); playSound(id, style) }
+  return (
+    <div className="row wrap" style={{ gap: 8 }}>
+      <div style={{ width: 92, fontWeight: 600, fontSize: 14 }}>{label}</div>
+      <select className="select" style={{ flex: 1, minWidth: 150 }} value={pick} onChange={(e) => choose(e.target.value)}>
+        {SOUND_GROUPS.map((g) => (
+          <optgroup key={g.title} label={g.title}>
+            {g.sounds.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+          </optgroup>
+        ))}
+        {custom && <optgroup label="من عندك"><option value={CUSTOM}>الصوت اللي رفعتيه</option></optgroup>}
+      </select>
+      <button className="btn sm" onClick={() => playSound(pick, style)} aria-label={`اسمعي صوت ${label}`}>▶ اسمعي</button>
+      <label className="btn sm" style={{ cursor: 'pointer' }}>
+        ارفعي صوت
+        <input type="file" accept="audio/*" hidden onChange={async (e) => {
+          const f = e.target.files?.[0]; e.target.value = ''
+          if (!f) return
+          const err = await setCustom(style, f)
+          if (err) { toast({ title: err, tone: 'warn' }); return }
+          setCustomState(true); setPickState(CUSTOM); playSound(CUSTOM, style)
+          toast({ title: `اتحط صوتك لـ${label}`, tone: 'ok' })
+        }} />
+      </label>
     </div>
   )
 }
