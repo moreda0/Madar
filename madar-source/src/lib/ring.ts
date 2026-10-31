@@ -89,26 +89,51 @@ function source(style: PickStyle, id: string): [string, string] {
 }
 
 let lastRing = 0
-/** Play a sound by id (for previews in Settings) */
-export async function playSound(id: string, style: PickStyle = 'assigned') {
+let ringEnds = 0
+let playing: AudioBufferSourceNode[] = []
+/** Silence a ring that is still repeating (any tap in Madar does this) */
+export function stopRing() {
+  playing.forEach((p) => { try { p.stop() } catch { /* already done */ } })
+  playing = []
+  ringEnds = 0
+}
+
+async function play(id: string, style: PickStyle, times: number) {
   const c = audio()
   if (!c) return
   const [key, url] = source(style, id)
   const buf = await load(c, key, url)
   if (!buf) return
-  const src = c.createBufferSource()
-  src.buffer = buf
-  src.connect(c.destination)
-  src.start()
+  stopRing()
+  const gap = 0.35
+  for (let i = 0; i < times; i++) {
+    const src = c.createBufferSource()
+    src.buffer = buf
+    src.connect(c.destination)
+    src.start(c.currentTime + i * (buf.duration + gap))
+    playing.push(src)
+  }
+  ringEnds = Date.now() + times * (buf.duration + gap) * 1000
 }
 
+/** Play a sound once (previews in Settings) */
+export const playSound = (id: string, style: PickStyle = 'assigned') => play(id, style, 1)
+
+export const RING_TIMES = 5
 export async function playRing(style: RingStyle = 'assigned', force = false) {
   if (!force && !ringOn()) return
   // the push and the synced notification can both ask for the same ring: play it once
-  if (!force && Date.now() - lastRing < 4000) return
+  if (!force && (Date.now() - lastRing < 4000 || Date.now() < ringEnds)) return
   lastRing = Date.now()
   const s: PickStyle = style === 'soft' ? 'reminder' : style
-  return playSound(getPicks()[s], s)
+  return play(getPicks()[s], s, force ? 1 : RING_TIMES)
+}
+
+// a tap anywhere in Madar while it is ringing means "I saw it"
+if (typeof window !== 'undefined') {
+  const hush = () => { if (Date.now() < ringEnds) stopRing() }
+  window.addEventListener('pointerdown', hush)
+  window.addEventListener('keydown', hush)
 }
 
 export const ringFor = (kind: NotificationKind): RingStyle =>

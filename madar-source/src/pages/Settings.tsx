@@ -137,7 +137,7 @@ export function Settings() {
           <Icon name="sparkle" />
           <div style={{ flex: 1, minWidth: 180 }}>
             <div style={{ fontWeight: 600 }}>رنة مدار</div>
-            <div className="soft" style={{ fontSize: 13 }}>اختاري صوت لكل نوع إشعار، أو ارفعي صوت من عندك</div>
+            <div className="soft" style={{ fontSize: 13 }}>اختاري صوت لكل نوع إشعار، أو ارفعي صوت من عندك. الرنة بتتكرر ٥ مرات، ودوسة على أي حاجة تسكّتها</div>
           </div>
           <label className="row" style={{ gap: 8, cursor: 'pointer' }}>
             <input type="checkbox" checked={ring} onChange={(e) => { setRingOn(e.target.checked); setRing(e.target.checked); if (e.target.checked) playRing('assigned', true) }} style={{ width: 20, height: 20, accentColor: 'var(--cyan)' }} />
