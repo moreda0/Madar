@@ -30,10 +30,11 @@ if (typeof window !== 'undefined') {
 }
 
 // decoded once, then every ring starts instantly
+export const SOUND_V = 3
 const buffers = new Map<string, Promise<AudioBuffer | null>>()
 function load(c: AudioContext, name: string) {
   if (!buffers.has(name))
-    buffers.set(name, fetch(`./sounds/${name}.mp3`).then((r) => r.arrayBuffer()).then((b) => c.decodeAudioData(b)).catch(() => { buffers.delete(name); return null }))
+    buffers.set(name, fetch(`./sounds/${name}.mp3?v=${SOUND_V}`, { cache: 'reload' }).then((r) => r.arrayBuffer()).then((b) => c.decodeAudioData(b)).catch(() => { buffers.delete(name); return null }))
   return buffers.get(name)!
 }
 
@@ -47,10 +48,34 @@ export async function playRing(style: RingStyle = 'assigned', force = false) {
   if (!c) return
   const buf = await load(c, FILE[style])
   if (!buf) return
-  const src = c.createBufferSource()
-  src.buffer = buf
-  src.connect(c.destination)
-  src.start()
+  // drive the sound hard into a soft clipper: as loud as the speakers allow, a bit gritty (it's meant to be funny)
+  const drive = c.createGain()
+  drive.gain.value = DRIVE
+  const clip = c.createWaveShaper()
+  clip.curve = clipCurve()
+  clip.oversample = '4x'
+  drive.connect(clip).connect(c.destination)
+  // play it more than once so it can't be missed: chicken x2, duck x3, trombone x2
+  const times = style === 'reminder' || style === 'soft' ? 3 : 2
+  for (let i = 0; i < times; i++) {
+    const src = c.createBufferSource()
+    src.buffer = buf
+    src.connect(drive)
+    src.start(c.currentTime + i * (buf.duration + 0.12))
+  }
+}
+
+const DRIVE = 2.6
+let curve: Float32Array<ArrayBuffer> | null = null
+function clipCurve() {
+  if (!curve) {
+    curve = new Float32Array(2048)
+    for (let i = 0; i < curve.length; i++) {
+      const x = (i / (curve.length - 1)) * 2 - 1
+      curve[i] = Math.tanh(x * 1.5) / Math.tanh(1.5)
+    }
+  }
+  return curve
 }
 
 export const ringFor = (kind: NotificationKind): RingStyle =>
