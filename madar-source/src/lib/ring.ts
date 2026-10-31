@@ -37,8 +37,12 @@ function load(c: AudioContext, name: string) {
   return buffers.get(name)!
 }
 
+let lastRing = 0
 export async function playRing(style: RingStyle = 'assigned', force = false) {
   if (!force && !ringOn()) return
+  // the push and the synced notification can both ask for the same ring: play it once
+  if (!force && Date.now() - lastRing < 4000) return
+  lastRing = Date.now()
   const c = audio()
   if (!c) return
   const buf = await load(c, FILE[style])
@@ -51,3 +55,9 @@ export async function playRing(style: RingStyle = 'assigned', force = false) {
 
 export const ringFor = (kind: NotificationKind): RingStyle =>
   kind === 'assigned' ? 'assigned' : kind === 'reminder' ? 'reminder' : kind === 'overdue' ? 'overdue' : 'soft'
+
+// a push that lands while Madar is open (even in a background tab) rings with Madar's own sound too
+if (typeof navigator !== 'undefined' && navigator.serviceWorker)
+  navigator.serviceWorker.addEventListener('message', (e) => {
+    if (e.data?.type === 'ring') playRing(ringFor(e.data.kind))
+  })

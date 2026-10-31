@@ -1,5 +1,5 @@
 // مدار service worker: app shell cache so it opens offline, push notifications, notification clicks.
-const CACHE = 'madar-v13'
+const CACHE = 'madar-v14'
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './sounds/new-task.mp3', './sounds/reminder.mp3', './sounds/overdue.mp3'])))
@@ -32,7 +32,10 @@ const VIBRATE = { assigned: [90, 70, 90, 70, 90, 70, 320], reminder: [120, 90, 1
 self.addEventListener('push', (e) => {
   let d = {}
   try { d = e.data ? e.data.json() : {} } catch { d = { title: 'مدار', body: e.data ? e.data.text() : '' } }
-  e.waitUntil(self.registration.showNotification(d.title || 'مدار', {
+  e.waitUntil(Promise.all([
+    // any open Madar window plays the funny sound; the phone's own sound covers the rest
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => list.forEach((c) => c.postMessage({ type: 'ring', kind: d.kind }))),
+    self.registration.showNotification(d.title || 'مدار', {
     body: d.body || '',
     tag: d.tag,
     renotify: true,
@@ -43,7 +46,7 @@ self.addEventListener('push', (e) => {
     vibrate: VIBRATE[d.kind] || [120, 80, 120],
     requireInteraction: d.kind === 'overdue' || d.kind === 'assigned',
     data: { url: d.taskId ? `./#/tasks?t=${d.taskId}` : './#/notifications' },
-  }))
+  })]))
 })
 
 self.addEventListener('notificationclick', (e) => {
