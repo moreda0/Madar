@@ -6,6 +6,7 @@ import { Avatar, CompanyChips, ConfirmDialog, Toasts, useUnreadCount } from './u
 import { SyncDot, logoutEverywhere } from './Sync'
 import { Icon } from './Icon'
 import { TaskDrawer } from './TaskDrawer'
+import { Mascot } from './Mascot'
 import { NewTaskModal } from './TaskForm'
 import { useReminderEngine } from '../lib/reminders'
 import { enablePush } from '../lib/push'
@@ -136,6 +137,7 @@ export function Layout() {
       <NewTaskModal />
       <ConfirmDialog />
       <Toasts />
+      <Mascot />
     </div>
   )
 }

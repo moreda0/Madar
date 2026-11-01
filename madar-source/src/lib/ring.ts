@@ -126,6 +126,7 @@ export async function playRing(style: RingStyle = 'assigned', force = false) {
   if (!force && (Date.now() - lastRing < 4000 || Date.now() < ringEnds)) return
   lastRing = Date.now()
   const s: PickStyle = style === 'soft' ? 'reminder' : style
+  if (!force) window.dispatchEvent(new Event('madar-mascot'))
   return play(getPicks()[s], s, force ? 1 : RING_TIMES)
 }
 

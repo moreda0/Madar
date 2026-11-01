@@ -1,8 +1,8 @@
 // مدار service worker: app shell cache so it opens offline, push notifications, notification clicks.
-const CACHE = 'madar-v17'
+const CACHE = 'madar-v18'
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', ...['chicken', 'duck', 'trombone'].map((n) => `./sounds/lib/${n}.mp3`)])))
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './mascot/man.webp', './mascot/icon.png', ...['chicken', 'duck', 'trombone'].map((n) => `./sounds/lib/${n}.mp3`)])))
   self.skipWaiting()
 })
 
@@ -39,7 +39,7 @@ self.addEventListener('push', (e) => {
     body: d.body || '',
     tag: d.tag,
     renotify: true,
-    icon: './icons/icon-192.png',
+    icon: './mascot/icon.png',
     badge: './icons/icon-192.png',
     dir: 'rtl',
     lang: 'ar',
