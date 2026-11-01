@@ -9,6 +9,7 @@ import { initialsOf } from '../lib/utils'
 import { Avatar } from '../components/ui'
 import { Icon } from '../components/Icon'
 import { useSync } from '../lib/sync'
+import { showMascot } from '../components/Mascot'
 import { SyncCard, logoutEverywhere, syncOn } from '../components/Sync'
 
 type InstallEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> }
@@ -149,6 +150,10 @@ export function Settings() {
             <RingPicker style="assigned" label="مهمة جديدة" />
             <RingPicker style="reminder" label="تذكير" />
             <RingPicker style="overdue" label="متأخرة" />
+            <div className="row wrap" style={{ gap: 8 }}>
+              <div style={{ flex: 1, minWidth: 180, fontSize: 14 }} className="soft">الشخصية بتنزل تصقف مع كل إشعار</div>
+              <button className="btn sm" onClick={showMascot}>👏 شوفيها</button>
+            </div>
           </div>
         )}
       </div>

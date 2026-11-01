@@ -374,3 +374,19 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
 .draft-task { padding: 12px 14px; }
 .draft-task.off { opacity: 0.5; }
 .draft-task .select, .draft-task .input[type='datetime-local'] { min-height: 38px; padding: 6px 10px; }
+
+/* Madar mascot: falls in from the top, bounces, claps with confetti, then floats away */
+.mascot-layer { position: fixed; inset: 0; z-index: 90; pointer-events: auto; overflow: hidden; background: radial-gradient(circle at 50% 30%, rgba(34,211,238,.10), transparent 60%); animation: mascot-fade 0.5s ease-in 5.5s both; }
+.mascot { position: absolute; left: 50%; top: 14px; width: min(34vw, 170px); translate: -50% 0;
+  animation: mascot-drop 0.9s cubic-bezier(.2,1.4,.4,1) both; filter: drop-shadow(0 18px 30px rgba(0,0,0,.55)); }
+.mascot img { width: 100%; display: block; animation: mascot-bob 0.5s ease-in-out 0.9s infinite; transform-origin: 50% 100%; }
+.mascot .clap { position: absolute; top: 38%; font-size: clamp(34px, 9vw, 54px); animation: clap 0.25s ease-in-out 0.9s infinite alternate; }
+.mascot .clap.a { inset-inline-start: -38%; }
+.mascot .clap.b { inset-inline-end: -38%; animation-delay: 1.02s; }
+.confetti { position: absolute; top: -12px; width: 9px; height: 14px; border-radius: 2px; opacity: 0; animation: confetti 2.6s ease-in both; }
+@keyframes mascot-drop { from { transform: translateY(-120vh) rotate(-12deg) scale(.6); } to { transform: none; } }
+@keyframes mascot-bob { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-10px) rotate(2deg) scale(1.02); } }
+@keyframes clap { from { transform: scale(.85) rotate(-14deg); } to { transform: scale(1.25) rotate(10deg); } }
+@keyframes confetti { 0% { opacity: 1; transform: translate(0, 0) rotate(0); } 100% { opacity: .9; transform: translate(var(--drift), 105vh) rotate(720deg); } }
+@keyframes mascot-fade { to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .mascot, .mascot img, .mascot .clap, .confetti { animation: none; } .confetti { display: none; } }
