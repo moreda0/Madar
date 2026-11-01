@@ -377,9 +377,11 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
 
 /* Madar mascot: falls in from the top, then claps and bobbles with confetti, then fades */
 .mascot-layer { position: fixed; inset: 0; z-index: 90; overflow: hidden; background: radial-gradient(circle at 50% 30%, rgba(34,211,238,.10), transparent 60%); animation: mascot-fade 0.5s ease-in 5.5s both; }
-.mascot { position: absolute; left: 50%; top: 14px; width: min(34vw, 170px); translate: -50% 0;
+.mascot { position: absolute; left: 50%; top: 14px; width: min(52vw, 240px); translate: -50% 0;
   animation: mascot-drop 0.9s cubic-bezier(.2,1.4,.4,1) both; filter: drop-shadow(0 18px 30px rgba(0,0,0,.55)); }
-.mascot .fig { position: relative; aspect-ratio: 423 / 1173; animation: mascot-hop 0.32s ease-in-out 0.9s infinite alternate; }
+.groom { position: relative; aspect-ratio: 10 / 17; }
+.groom canvas { position: absolute; inset: 0; width: 100%; height: 100%; transition: opacity .2s; }
+.mascot .fig { position: absolute; inset: 0 18%; aspect-ratio: auto; animation: mascot-hop 0.32s ease-in-out 0.9s infinite alternate; }
 .mascot .fig img { position: absolute; inset: 0; width: 100%; height: 100%; }
 .mascot .larm { transform-origin: 13% 40%; animation: clap-l 0.32s ease-in-out 0.9s infinite alternate; }
 .mascot .rarm { transform-origin: 87% 40%; animation: clap-r 0.32s ease-in-out 0.9s infinite alternate; }
