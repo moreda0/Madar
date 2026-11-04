@@ -1,14 +1,20 @@
 // رنة مدار: every kind of notification has its own sound, picked in Settings from Madar's library
-// (public/sounds/lib) or uploaded from the person's own device. Defaults: chicken, duck, sad trombone.
+// (public/sounds/lib) or uploaded from the person's own device. Defaults: crystal chime, kalimba, urgent marimba.
 import type { NotificationKind } from './types'
 
 const KEY = 'madar-ring'
-const PICK_KEY = 'madar-ring-pick'
+// v2: the whole ring set changed, so earlier picks start over on the new defaults
+const PICK_KEY = 'madar-ring-pick-v2'
 const CUSTOM_KEY = (s: PickStyle) => `madar-ring-custom-${s}`
 export type RingStyle = 'assigned' | 'reminder' | 'overdue' | 'soft'
 export type PickStyle = 'assigned' | 'reminder' | 'overdue'
 
 export const SOUND_GROUPS: { title: string; sounds: { id: string; name: string }[] }[] = [
+  { title: 'شيك', sounds: [
+    { id: 'crystal', name: 'جرس كريستال' }, { id: 'kalimba', name: 'كاليمبا' }, { id: 'urgent', name: 'ماريمبا مستعجلة' },
+    { id: 'piano', name: 'بيانو' }, { id: 'harp', name: 'هارب' }, { id: 'musicbox', name: 'صندوق موسيقى' },
+    { id: 'vibes', name: 'فايبرافون' }, { id: 'glass', name: 'كاس زجاج' }, { id: 'success', name: 'تمام!' }, { id: 'bowl', name: 'جرس تأمل' },
+  ] },
   { title: 'مضحكة', sounds: [
     { id: 'chicken', name: 'فرخة بتصرخ' }, { id: 'duck', name: 'بطة' }, { id: 'trombone', name: 'ترومبون حزين' },
     { id: 'boing', name: 'صفارة وبوينج' }, { id: 'monkey-laugh', name: 'قرد بيضحك' }, { id: 'frogs', name: 'كورال ضفادع' },
@@ -26,7 +32,7 @@ export const SOUND_GROUPS: { title: string; sounds: { id: string; name: string }
   ] },
 ]
 export const CUSTOM = 'custom'
-export const DEFAULT_PICK: Record<PickStyle, string> = { assigned: 'chicken', reminder: 'duck', overdue: 'trombone' }
+export const DEFAULT_PICK: Record<PickStyle, string> = { assigned: 'crystal', reminder: 'kalimba', overdue: 'urgent' }
 export const soundName = (id: string) =>
   id === CUSTOM ? 'صوت من عندك' : SOUND_GROUPS.flatMap((g) => g.sounds).find((s) => s.id === id)?.name ?? id
 
