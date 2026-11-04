@@ -1,8 +1,8 @@
 // مدار service worker: app shell cache so it opens offline, push notifications, notification clicks.
-const CACHE = 'madar-v21'
+const CACHE = 'madar-v22'
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', ...['body', 'head', 'larm', 'rarm'].map((n) => `./mascot/${n}.webp`), './mascot/icon.png', ...['chicken', 'duck', 'trombone'].map((n) => `./sounds/lib/${n}.mp3`)])))
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', ...['body', 'head', 'larm', 'rarm'].map((n) => `./mascot/${n}.webp`), './mascot/icon.png', ...['crystal', 'kalimba', 'urgent'].map((n) => `./sounds/lib/${n}.mp3`)])))
   self.skipWaiting()
 })
 
@@ -33,7 +33,7 @@ self.addEventListener('push', (e) => {
   let d = {}
   try { d = e.data ? e.data.json() : {} } catch { d = { title: 'مدار', body: e.data ? e.data.text() : '' } }
   e.waitUntil(Promise.all([
-    // any open Madar window plays the funny sound; the phone's own sound covers the rest
+    // any open Madar window plays Madar's own sound; the phone's own sound covers the rest
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => list.forEach((c) => c.postMessage({ type: 'ring', kind: d.kind }))),
     self.registration.showNotification(d.title || 'مدار', {
     body: d.body || '',
