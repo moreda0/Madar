@@ -31,9 +31,9 @@ export function buildSeed() {
   ]
 
   const companies: Company[] = [
-    { id: 'c_nour', name: 'النور للمقاولات', short: 'النور', color: '#22D3EE', workStart: '09:00', workEnd: '17:00', graceMinutes: 15, strictGeofence: false, qrSecret: randomSecret(), sample: true },
-    { id: 'c_reyada', name: 'الريادة للاستثمار', short: 'الريادة', color: '#A78BFA', workStart: '10:00', workEnd: '18:00', graceMinutes: 15, strictGeofence: false, qrSecret: randomSecret(), sample: true },
-    { id: 'c_smart', name: 'سمارت تك', short: 'سمارت تك', color: '#FBBF24', workStart: '09:30', workEnd: '17:30', graceMinutes: 10, strictGeofence: false, qrSecret: randomSecret(), sample: true },
+    { id: 'c_nour', name: 'النور للمقاولات', short: 'النور', color: '#8B4CA8', workStart: '09:00', workEnd: '17:00', graceMinutes: 15, strictGeofence: false, qrSecret: randomSecret(), sample: true },
+    { id: 'c_reyada', name: 'الريادة للاستثمار', short: 'الريادة', color: '#C0397A', workStart: '10:00', workEnd: '18:00', graceMinutes: 15, strictGeofence: false, qrSecret: randomSecret(), sample: true },
+    { id: 'c_smart', name: 'سمارت تك', short: 'سمارت تك', color: '#B45309', workStart: '09:30', workEnd: '17:30', graceMinutes: 10, strictGeofence: false, qrSecret: randomSecret(), sample: true },
   ]
 
   const units: OrgUnit[] = [

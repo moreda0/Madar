@@ -2,7 +2,7 @@ import { useEffect, type ReactNode } from 'react'
 import { useStore, useUI } from '../lib/store'
 import { useMyCompanies } from '../lib/access'
 import type { Company, User } from '../lib/types'
-import { hexA } from '../lib/utils'
+import { hexA, ink } from '../lib/utils'
 import { Icon } from './Icon'
 
 export function Overlay({ onClose, children, kind = 'modal', label }: { onClose: () => void; children: ReactNode; kind?: 'modal' | 'drawer'; label: string }) {
@@ -36,7 +36,7 @@ export function Avatar({ user, size }: { user?: User; size?: 'sm' | 'lg' }) {
 export function CompanyTag({ company }: { company?: Company }) {
   if (!company) return null
   return (
-    <span className="pill" style={{ background: hexA(company.color, 0.12), color: company.color }}>
+    <span className="pill" style={{ background: hexA(company.color, 0.12), color: ink(company.color) }}>
       <span className="cdot" style={{ background: company.color }} />
       {company.short}
     </span>
@@ -61,7 +61,7 @@ export function CompanyChips() {
             className="chip"
             aria-pressed={on}
             onClick={() => setFilter(on ? 'all' : c.id)}
-            style={on ? { background: c.color, color: '#070A14', borderColor: c.color, fontWeight: 600 } : { borderColor: hexA(c.color, 0.45), color: c.color }}
+            style={on ? { background: ink(c.color), color: '#FFFFFF', borderColor: ink(c.color), fontWeight: 600 } : { borderColor: hexA(c.color, 0.45), color: ink(c.color) }}
           >
             {c.short}
           </button>
@@ -77,7 +77,7 @@ export function Ring({ value, total, size = 92, label, color = 'var(--cyan-2)' }
   const pct = total ? value / total : 0
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={label ?? `${value} من ${total}`}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth="9" />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(139,76,168,0.12)" strokeWidth="9" />
       <circle
         cx={size / 2}
         cy={size / 2}
@@ -90,7 +90,7 @@ export function Ring({ value, total, size = 92, label, color = 'var(--cyan-2)' }
         transform={`rotate(-90 ${size / 2} ${size / 2})`}
         style={{ transition: 'stroke-dasharray .5s ease' }}
       />
-      <text x={size / 2} y={size / 2 + 7} textAnchor="middle" fill="#E8ECF6" fontFamily="Readex Pro" fontSize={size / 4.2} fontWeight="700">
+      <text x={size / 2} y={size / 2 + 7} textAnchor="middle" fill="#16101B" fontFamily="Readex Pro" fontSize={size / 4.2} fontWeight="700">
         {value}/{total}
       </text>
     </svg>

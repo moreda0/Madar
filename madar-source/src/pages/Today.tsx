@@ -98,7 +98,7 @@ export function Today() {
             const present = attendance.filter((a) => a.companyId === c.id && isToday(a.checkInAt)).length
             const doneWeek = ct.filter((t) => t.completedAt && Date.now() - new Date(t.completedAt).getTime() < 7 * 864e5).length
             return (
-              <div key={c.id} className="card" style={{ borderColor: hexA(c.color, 0.3), background: `linear-gradient(160deg, ${hexA(c.color, 0.1)}, rgba(255,255,255,0.03))` }}>
+              <div key={c.id} className="card" style={{ borderColor: hexA(c.color, 0.3), background: `linear-gradient(160deg, ${hexA(c.color, 0.1)}, rgba(255,255,255,0.9))` }}>
                 <div className="card-head">
                   <span className="cdot" style={{ background: c.color, boxShadow: `0 0 10px ${c.color}`, width: 10, height: 10 }} />
                   <h3>{c.name}</h3>

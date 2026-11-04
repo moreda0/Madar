@@ -74,7 +74,7 @@ export function Meetings() {
           <button key={m.id} className="card meeting-card" onClick={() => setParams({ m: m.id })}>
             <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
               <CompanyTag company={companies[m.companyId]} />
-              <span className="pill" style={{ background: 'rgba(167,139,250,.12)', color: '#C4B5FD' }}><Icon name={m.source === 'whatsapp' ? 'whatsapp' : 'mic'} size={12} /> {SOURCE_LABEL[m.source]}</span>
+              <span className="pill" style={{ background: 'rgba(181,87,154,.12)', color: '#8E3F79' }}><Icon name={m.source === 'whatsapp' ? 'whatsapp' : 'mic'} size={12} /> {SOURCE_LABEL[m.source]}</span>
               <span className="spacer" />
               <span className="muted num" style={{ fontSize: 13 }}>{fmtDay(m.at)} · {fmtTime(m.at)}</span>
             </div>

@@ -210,11 +210,11 @@ function ScoreRing({ score, size = 150 }: { score: number | null; size?: number 
   const color = scoreTone(score)
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={score === null ? 'مفيش بيانات' : `${score} من 100`} style={{ flex: 'none' }}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="12" />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(139,76,168,0.10)" strokeWidth="12" />
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth="12" strokeLinecap="round"
         strokeDasharray={`${((score ?? 0) / 100) * c} ${c}`} transform={`rotate(-90 ${size / 2} ${size / 2})`} style={{ transition: 'stroke-dasharray .6s ease', filter: `drop-shadow(0 0 8px ${color})` }} />
-      <text x={size / 2} y={size / 2 + 6} textAnchor="middle" fill="#E8ECF6" fontFamily="Readex Pro" fontSize={size / 4} fontWeight="700">{score ?? '—'}</text>
-      {size >= 120 && <text x={size / 2} y={size / 2 + 28} textAnchor="middle" fill="#8B96B0" fontFamily="IBM Plex Sans Arabic" fontSize="12">من 100</text>}
+      <text x={size / 2} y={size / 2 + 6} textAnchor="middle" fill="#16101B" fontFamily="Readex Pro" fontSize={size / 4} fontWeight="700">{score ?? '—'}</text>
+      {size >= 120 && <text x={size / 2} y={size / 2 + 28} textAnchor="middle" fill="#76607F" fontFamily="IBM Plex Sans Arabic" fontSize="12">من 100</text>}
     </svg>
   )
 }
@@ -228,8 +228,8 @@ function HistoryChart({ points }: { points: { k: string; s: number | null }[] })
         const y = H - (g / 100) * (H - 10)
         return (
           <g key={g}>
-            <line x1={pad} x2={W - pad} y1={y} y2={y} stroke="rgba(255,255,255,0.07)" strokeDasharray="3 4" />
-            <text x={pad - 4} y={y + 4} textAnchor="end" fontSize="9" fill="#8B96B0">{g}</text>
+            <line x1={pad} x2={W - pad} y1={y} y2={y} stroke="rgba(139,76,168,0.12)" strokeDasharray="3 4" />
+            <text x={pad - 4} y={y + 4} textAnchor="end" fontSize="9" fill="#76607F">{g}</text>
           </g>
         )
       })}
@@ -241,8 +241,8 @@ function HistoryChart({ points }: { points: { k: string; s: number | null }[] })
         return (
           <g key={p.k}>
             <rect x={x} y={H - h} width={bw * 0.6} height={Math.max(h, 0)} rx="5" fill={p.s === null ? 'transparent' : scoreTone(p.s)} opacity={last ? 1 : 0.55} />
-            {p.s !== null && <text x={x + bw * 0.3} y={H - h - 5} textAnchor="middle" fontSize="10" fill="#E8ECF6" fontFamily="Readex Pro">{p.s}</text>}
-            <text x={x + bw * 0.3} y={H + 15} textAnchor="middle" fontSize="10" fill="#8B96B0">{monthLabel(p.k, true)}</text>
+            {p.s !== null && <text x={x + bw * 0.3} y={H - h - 5} textAnchor="middle" fontSize="10" fill="#16101B" fontFamily="Readex Pro">{p.s}</text>}
+            <text x={x + bw * 0.3} y={H + 15} textAnchor="middle" fontSize="10" fill="#76607F">{monthLabel(p.k, true)}</text>
           </g>
         )
       })}
@@ -256,11 +256,11 @@ export function Stars({ value, onChange, size = 18, label }: { value: number; on
       {[1, 2, 3, 4, 5].map((n) =>
         onChange ? (
           <button key={n} type="button" role="radio" aria-checked={value === n} aria-label={`${n} من 5`} onClick={() => onChange(n)}
-            style={{ background: 'none', border: 0, padding: 4, cursor: 'pointer', color: n <= value ? '#FBBF24' : 'rgba(255,255,255,0.2)' }}>
+            style={{ background: 'none', border: 0, padding: 4, cursor: 'pointer', color: n <= value ? '#B45309' : 'rgba(139,76,168,0.25)' }}>
             <svg width={size + 6} height={size + 6} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z" /></svg>
           </button>
         ) : (
-          <svg key={n} width={size} height={size} viewBox="0 0 24 24" fill={n <= value ? '#FBBF24' : 'rgba(255,255,255,0.15)'} aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z" /></svg>
+          <svg key={n} width={size} height={size} viewBox="0 0 24 24" fill={n <= value ? '#B45309' : 'rgba(139,76,168,0.2)'} aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z" /></svg>
         ),
       )}
     </span>
@@ -328,7 +328,7 @@ function TeamPanel({ company, team }: { company: Company; team: Membership[] }) 
                     <td><b className="num" style={{ color: scoreTone(now), fontSize: 18 }}>{now ?? '—'}</b>{diff !== null && diff !== 0 && <span className="num" style={{ fontSize: 12, color: diff > 0 ? 'var(--green-2)' : 'var(--rose)', marginInlineStart: 6 }}>{diff > 0 ? `+${diff}` : diff}</span>}</td>
                     <td className="num" style={{ color: scoreTone(last) }}>{last ?? '—'}</td>
                     <td className="num">{kpi === null ? '—' : `${kpi}%`}</td>
-                    <td>{rated ? <span className="pill" style={{ background: 'rgba(52,211,153,.12)', color: 'var(--green-2)' }}><Icon name="check" size={12} /> اتقيّم</span> : <span className="pill" style={{ background: 'rgba(251,191,36,.12)', color: 'var(--amber)' }}>لسه</span>}</td>
+                    <td>{rated ? <span className="pill" style={{ background: 'rgba(21,128,61,.10)', color: 'var(--green-2)' }}><Icon name="check" size={12} /> اتقيّم</span> : <span className="pill" style={{ background: 'rgba(180,83,9,.10)', color: 'var(--amber)' }}>لسه</span>}</td>
                     <td>
                       <div className="row" style={{ gap: 4, justifyContent: 'flex-end' }}>
                         <button className="btn sm" onClick={() => setModal({ kind: 'rate', userId: m.userId })}><Icon name="star" size={15} /> {rated ? 'عدّلي' : 'قيّمي'}</button>
@@ -439,7 +439,7 @@ function ReviewModal({ company, userId, onClose, onPromote }: { company: Company
           <div className="row wrap" style={{ gap: 6 }}>
             {(Object.keys(GRADE_LABEL) as ReviewGrade[]).map((g) => (
               <button type="button" key={g} className="chip" aria-pressed={grade === g} onClick={() => setGrade(g)}
-                style={grade === g ? { background: GRADE_COLOR[g], color: '#070A14', borderColor: GRADE_COLOR[g], fontWeight: 600 } : { color: GRADE_COLOR[g], borderColor: `${GRADE_COLOR[g]}66` }}>{GRADE_LABEL[g]}</button>
+                style={grade === g ? { background: GRADE_COLOR[g], color: '#FFFFFF', borderColor: GRADE_COLOR[g], fontWeight: 600 } : { color: GRADE_COLOR[g], borderColor: `${GRADE_COLOR[g]}66` }}>{GRADE_LABEL[g]}</button>
             ))}
           </div>
         </div>
@@ -544,7 +544,7 @@ function PromoRow({ p, actions }: { p: import('../lib/types').Promotion; actions
         <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>اقترحها {users[p.proposedBy]?.name} · تبدأ <span className="num">{p.effectiveDate}</span></div>
       </div>
       <div className="col" style={{ alignItems: 'flex-end', gap: 8 }}>
-        <span className="pill" style={{ background: 'rgba(255,255,255,.06)', color: st.c }}>{st.t}</span>
+        <span className="pill" style={{ background: 'rgba(139,76,168,.08)', color: st.c }}>{st.t}</span>
         {actions}
       </div>
     </div>
@@ -592,8 +592,8 @@ function KpiLine({ k, all, onEdit, onAddChild, canUpdate }: { k: Kpi; all: Kpi[]
     <div style={{ padding: '10px 12px', borderRadius: 14, background: 'var(--panel)', border: '1px solid var(--line)' }}>
       <div className="row wrap" style={{ gap: 8 }}>
         <span style={{ fontWeight: 600, flex: 1, minWidth: 160 }}>{k.title}</span>
-        <span className="pill" style={{ background: 'rgba(255,255,255,.06)', color: 'var(--soft)' }}>{PERIOD_LABEL[k.period]}</span>
-        {!k.higherIsBetter && <span className="pill" style={{ background: 'rgba(255,255,255,.06)', color: 'var(--soft)' }}>الأقل أحسن</span>}
+        <span className="pill" style={{ background: 'rgba(139,76,168,.08)', color: 'var(--soft)' }}>{PERIOD_LABEL[k.period]}</span>
+        {!k.higherIsBetter && <span className="pill" style={{ background: 'rgba(139,76,168,.08)', color: 'var(--soft)' }}>الأقل أحسن</span>}
         <b className="num" style={{ color: scoreTone(Math.min(ach, 100)), minWidth: 44, textAlign: 'end' }}>{ach}%</b>
       </div>
       <div className="progress" style={{ height: 7, margin: '8px 0 6px' }}>

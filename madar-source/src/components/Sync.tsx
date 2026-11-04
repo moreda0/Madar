@@ -136,7 +136,7 @@ export function SyncCard() {
           <p className="soft" style={{ margin: 0, fontSize: 14 }}>
             كل تعديل بيتحفظ على السيرفر ويظهر على كل الأجهزة والفريق على طول. لو النت فصل بتكملي عادي، وأول ما يرجع بنرفع.
           </p>
-          {st.email && <div className="row" style={{ fontSize: 14 }}><span className="muted">داخلة بـ</span><span dir="ltr" className="num">{st.email}</span>{st.role === 'owner' || st.role === 'owner-new' ? <span className="pill" style={{ background: 'rgba(34,211,238,.12)', color: 'var(--cyan-2)' }}>صاحبة مدار</span> : null}</div>}
+          {st.email && <div className="row" style={{ fontSize: 14 }}><span className="muted">داخلة بـ</span><span dir="ltr" className="num">{st.email}</span>{st.role === 'owner' || st.role === 'owner-new' ? <span className="pill" style={{ background: 'rgba(139,76,168,.12)', color: 'var(--cyan-2)' }}>صاحبة مدار</span> : null}</div>}
           {st.pending > 0 && <div className="muted" style={{ fontSize: 13 }}>مستني يترفع: <span className="num">{st.pending}</span></div>}
           {st.lastSync && <div className="muted" style={{ fontSize: 13 }}>آخر مزامنة: <span className="num">{new Date(st.lastSync).toLocaleTimeString('ar-EG', { hour: 'numeric', minute: '2-digit' })}</span></div>}
           {st.error && st.status === 'error' && <p style={{ margin: 0, color: 'var(--rose)', fontSize: 14 }}>{st.error}</p>}
