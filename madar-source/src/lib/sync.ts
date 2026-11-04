@@ -13,7 +13,7 @@ import { initialsOf, uid } from './utils'
  * over realtime and are merged back in. Last write wins per record.
  */
 
-export const COLLECTIONS = ['users', 'companies', 'units', 'memberships', 'tasks', 'notifications', 'attendance', 'kpis', 'ratings', 'reviews', 'promotions', 'meetings'] as const
+export const COLLECTIONS = ['users', 'companies', 'units', 'memberships', 'tasks', 'notifications', 'attendance', 'kpis', 'ratings', 'reviews', 'promotions', 'meetings', 'leaves'] as const
 type Kind = (typeof COLLECTIONS)[number]
 type Item = Record<string, unknown>
 interface Row { kind: Kind; id: string; data: Item; deleted: boolean; updated_at?: string }

@@ -93,13 +93,15 @@ export function Performance() {
 function PersonPanel({ company, userId, self }: { company: Company; userId: ID; self?: boolean }) {
   const tasks = useStore((s) => s.tasks)
   const attendance = useStore((s) => s.attendance)
+  const companies = useStore((s) => s.companies)
+  const leaves = useStore((s) => s.leaves)
   const ratings = useStore((s) => s.ratings)
   const kpis = useStore((s) => s.kpis)
   const reviews = useStore((s) => s.reviews)
   const promotions = useStore((s) => s.promotions)
   const users = useUserMap()
   const [month, setMonth] = useState(monthKey())
-  const data = { tasks, attendance, ratings }
+  const data = { tasks, attendance, ratings, companies, leaves }
   const cur = monthScore(data, userId, company.id, month)
   const history = lastMonths(6, month).map((k) => ({ k, s: monthScore(data, userId, company.id, k).score }))
   const rating = ratings.find((r) => r.userId === userId && r.companyId === company.id && r.month === month)
@@ -272,6 +274,8 @@ export function Stars({ value, onChange, size = 18, label }: { value: number; on
 function TeamPanel({ company, team }: { company: Company; team: Membership[] }) {
   const tasks = useStore((s) => s.tasks)
   const attendance = useStore((s) => s.attendance)
+  const companies = useStore((s) => s.companies)
+  const leaves = useStore((s) => s.leaves)
   const ratings = useStore((s) => s.ratings)
   const kpis = useStore((s) => s.kpis)
   const reviews = useStore((s) => s.reviews)
@@ -280,7 +284,7 @@ function TeamPanel({ company, team }: { company: Company; team: Membership[] }) 
   const [modal, setModal] = useState<null | { kind: 'rate' | 'review' | 'promote' | 'view'; userId: ID }>(null)
   const month = monthKey()
   const prev = shiftMonth(month, -1)
-  const data = { tasks, attendance, ratings }
+  const data = { tasks, attendance, ratings, companies, leaves }
   const year = new Date().getFullYear()
 
   const rows = team
@@ -404,6 +408,8 @@ function ReviewModal({ company, userId, onClose, onPromote }: { company: Company
   const me = useStore((s) => s.currentUserId)!
   const tasks = useStore((s) => s.tasks)
   const attendance = useStore((s) => s.attendance)
+  const companies = useStore((s) => s.companies)
+  const leaves = useStore((s) => s.leaves)
   const ratings = useStore((s) => s.ratings)
   const kpis = useStore((s) => s.kpis)
   const year = new Date().getFullYear()
@@ -411,7 +417,7 @@ function ReviewModal({ company, userId, onClose, onPromote }: { company: Company
   const saveReview = useStore((s) => s.saveReview)
   const toast = useUI((s) => s.toast)
   const users = useUserMap()
-  const avgScore = yearAverage({ tasks, attendance, ratings }, userId, company.id, year)
+  const avgScore = yearAverage({ tasks, attendance, ratings, companies, leaves }, userId, company.id, year)
   const kpiAch = personalKpiAchievement(kpis, userId, company.id)
   const blended = avgScore === null ? kpiAch : kpiAch === null ? avgScore : Math.round(avgScore * 0.7 + kpiAch * 0.3)
   const [grade, setGrade] = useState<ReviewGrade>(existing?.grade ?? suggestGrade(blended))

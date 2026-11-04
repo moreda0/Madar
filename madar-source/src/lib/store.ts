@@ -6,6 +6,7 @@ import type {
   AttendanceRecord,
   Company,
   Kpi,
+  Leave,
   MonthlyRating,
   Promotion,
   Comment,
@@ -39,6 +40,7 @@ interface Data {
   reviews: AnnualReview[]
   promotions: Promotion[]
   meetings: Meeting[]
+  leaves: Leave[]
 }
 
 interface Session {
@@ -379,6 +381,7 @@ export const useStore = create<State>()(
             reviews: [],
             promotions: [],
             meetings: [],
+            leaves: [],
             currentUserId: me.id,
           })
         },

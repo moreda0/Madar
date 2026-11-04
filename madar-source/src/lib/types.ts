@@ -4,7 +4,7 @@ export type Role = 'admin' | 'manager' | 'employee'
 export type UnitType = 'division' | 'department' | 'team'
 export type TaskStatus = 'todo' | 'doing' | 'review' | 'done'
 export type Priority = 'low' | 'medium' | 'high' | 'urgent'
-export type CheckMethod = 'gps' | 'qr' | 'manual'
+export type CheckMethod = 'gps' | 'qr' | 'manual' | 'odoo'
 
 export interface User {
   id: ID
@@ -35,6 +35,12 @@ export interface Company {
   strictGeofence: boolean
   qrSecret: string
   sample?: boolean
+  /** linked company in Odoo (res.company id): its check-ins/outs come into Madar */
+  odooCompanyId?: number
+  /** working days, 0 = Sunday … 6 = Saturday. Default Sunday to Thursday */
+  workDays?: number[]
+  /** a working day with no check-in and no approved leave counts against the person */
+  countAbsence?: boolean
 }
 
 export interface OrgUnit {
@@ -122,8 +128,24 @@ export interface AttendanceRecord {
   distanceM?: number
   insideFence?: boolean
   late: boolean
+  /** checked out before the company's end time (minus grace) */
+  earlyLeave?: boolean
   plannedTaskIds: ID[]
   note?: string
+  /** came from Odoo (hr.attendance id) */
+  odooId?: number
+}
+
+/** Approved time off for one person, or a public holiday for a company (no userId) / everyone (no companyId). From Odoo. */
+export interface Leave {
+  id: ID
+  userId?: ID
+  companyId?: ID
+  from: string // ISO
+  to: string // ISO
+  type: string
+  holiday?: boolean
+  source?: 'odoo' | 'madar'
 }
 
 /* ---------- performance (phase 3) ---------- */

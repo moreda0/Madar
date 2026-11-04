@@ -11,6 +11,7 @@ import { Icon } from '../components/Icon'
 import { useSync } from '../lib/sync'
 import { showMascot } from '../components/Mascot'
 import { SyncCard, logoutEverywhere, syncOn } from '../components/Sync'
+import { OdooCard } from '../components/OdooCard'
 
 type InstallEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> }
 let deferredInstall: InstallEvent | null = null
@@ -25,6 +26,7 @@ const ROADMAP = [
   { t: 'المزامنة', d: 'حساب حقيقي بالإيميل وبيانات على السيرفر (Supabase) تتزامن بين اللابتوب والموبايل والفريق، وبتشتغل من غير نت', on: true },
   { t: 'مساعد مدار', d: 'بيفهم المصري بالكتابة والصوت: ملخص يومك، المتأخر، يضيف ويقفل مهام. ومع Claude أونلاين بيجاوب أي سؤال', on: true },
   { t: 'واتساب رايح جاي', d: 'التنبيهات توصلك واتساب بزرار "خلصت" و"فكّريني بعد ساعة"، وردك يحدّث مدار ويشيل التنبيه من كل مكان', on: true },
+  { t: 'الحضور من أودو', d: 'بصمات الحضور والانصراف والإجازات من أودو بتنزل لوحدها وبتتحسب في التقييم: تأخير، خروج بدري، وغياب', on: true },
   { t: 'الجاي', d: 'فهم الرسايل الصوتية على واتساب، وتقارير شهرية تتبعت لوحدها' },
 ]
 
@@ -159,6 +161,8 @@ export function Settings() {
       </div>
 
       <SyncCard />
+
+      <OdooCard />
 
       <div className="card stack" style={{ gap: 12 }}>
         <div className="row"><Icon name="whatsapp" /><h2 style={{ flex: 1 }}>تنبيهات واتساب</h2></div>

@@ -8,6 +8,7 @@ import { Avatar, CompanyTag, Overlay } from '../components/ui'
 import { Icon } from '../components/Icon'
 
 export const qrPayload = (c: Company) => `MADAR:${c.id}:${c.qrSecret}`
+export const METHOD_LABEL: Record<CheckMethod, string> = { qr: 'كود', gps: 'موقع', manual: 'يدوي', odoo: 'أودو' }
 export const shortCode = (c: Company) => c.qrSecret.slice(0, 6).toUpperCase()
 
 function getPosition(): Promise<GeolocationPosition> {
@@ -61,7 +62,9 @@ export function Attendance() {
     return <div className="card"><p className="soft">ضيفي شركة الأول من الهيكل التنظيمي عشان تقدري تسجلي حضور.</p></div>
 
   const role = roleIn(memberships, me, company.id)
-  const open = attendance.find((a) => a.userId === me && a.companyId === company.id && !a.checkOutAt && isToday(a.checkInAt))
+  // Odoo's check-ins arrive on their own; the Madar check-in stays for the daily plan
+  const open = attendance.find((a) => a.userId === me && a.companyId === company.id && !a.checkOutAt && isToday(a.checkInAt) && a.method !== 'odoo')
+  const fromOdoo = attendance.filter((a) => a.userId === me && a.companyId === company.id && a.method === 'odoo' && isToday(a.checkInAt)).sort((a, b) => a.checkInAt.localeCompare(b.checkInAt))
   const history = attendance.filter((a) => a.userId === me).sort((a, b) => +new Date(b.checkInAt) - +new Date(a.checkInAt)).slice(0, 10)
 
   const finishCheckIn = (rec: { method: CheckMethod; location?: { lat: number; lng: number; accuracy?: number }; distanceM?: number; insideFence?: boolean }) => {
@@ -123,6 +126,7 @@ export function Attendance() {
           </select>
         )}
         <span className="muted">مواعيد العمل <span className="num">{company.workStart} - {company.workEnd}</span></span>
+        {company.odooCompanyId && <span className="chip" style={{ fontSize: 12 }}>الحضور جاي من أودو</span>}
         <span className="spacer" />
         {role === 'admin' && <button className="btn sm" onClick={() => setQrOpen(true)}><Icon name="qr" size={16} /> كود الحضور للشركة</button>}
       </div>
@@ -147,6 +151,13 @@ export function Attendance() {
                   : 'امسحي الكود المتعلق في الشركة أو اكتبيه'}
               </div>
               {error && <div className="tone-late" style={{ fontSize: 14 }} role="alert">{error}</div>}
+              {fromOdoo.length > 0 && (
+                <div className="soft" style={{ fontSize: 13 }}>
+                  أودو سجّل حضورك النهارده <span className="num">{fmtTime(fromOdoo[0].checkInAt)}</span>{fromOdoo[0].late ? ' (متأخر)' : ''}
+                  {fromOdoo.at(-1)!.checkOutAt ? <> وانصرافك <span className="num">{fmtTime(fromOdoo.at(-1)!.checkOutAt!)}</span>{fromOdoo.at(-1)!.earlyLeave ? ' (بدري)' : ''}</> : null}
+                  . سجلي هنا بس لو عايزة تختاري خطة اليوم.
+                </div>
+              )}
             </>
           ) : (
             <>
@@ -198,16 +209,16 @@ export function Attendance() {
               <thead><tr><th>الاسم</th><th>الحالة</th><th>الحضور</th><th>الانصراف</th><th>الطريقة</th><th>خطة اليوم</th></tr></thead>
               <tbody>
                 {team.map((m) => {
-                  const r = attendance.find((a) => a.userId === m.userId && a.companyId === company.id && isToday(a.checkInAt))
+                  const r = attendance.filter((a) => a.userId === m.userId && a.companyId === company.id && isToday(a.checkInAt)).sort((a, b) => a.checkInAt.localeCompare(b.checkInAt))[0]
                   const done = r ? tasks.filter((t) => r.plannedTaskIds.includes(t.id) && t.status === 'done').length : 0
-                  const st = !r ? { t: 'لسه', c: 'var(--muted)' } : r.checkOutAt ? { t: 'انصرف', c: 'var(--soft)' } : r.late ? { t: 'متأخر', c: 'var(--amber)' } : { t: 'حاضر', c: 'var(--green-2)' }
+                  const st = !r ? { t: 'لسه', c: 'var(--muted)' } : r.checkOutAt ? { t: r.earlyLeave ? 'انصرف بدري' : 'انصرف', c: r.earlyLeave ? 'var(--amber)' : 'var(--soft)' } : r.late ? { t: 'متأخر', c: 'var(--amber)' } : { t: 'حاضر', c: 'var(--green-2)' }
                   return (
                     <tr key={m.userId}>
                       <td><span className="row" style={{ gap: 8 }}><Avatar user={users[m.userId]} size="sm" />{users[m.userId]?.name}</span></td>
                       <td style={{ color: st.c }}>{st.t}{r && r.insideFence === false ? ' · برة المقر' : ''}</td>
                       <td className="num">{r ? fmtTime(r.checkInAt) : '—'}</td>
                       <td className="num">{r?.checkOutAt ? fmtTime(r.checkOutAt) : '—'}</td>
-                      <td>{r ? (r.method === 'qr' ? 'كود' : r.method === 'gps' ? 'موقع' : 'يدوي') : '—'}</td>
+                      <td>{r ? METHOD_LABEL[r.method] : '—'}</td>
                       <td className="num">{r ? `${done}/${r.plannedTaskIds.length}` : '—'}</td>
                     </tr>
                   )
@@ -230,7 +241,7 @@ export function Attendance() {
                     <td>{fmtDay(a.checkInAt)}</td>
                     <td><CompanyTag company={companies.find((c) => c.id === a.companyId)} /></td>
                     <td className="num" style={{ color: a.late ? 'var(--amber)' : undefined }}>{fmtTime(a.checkInAt)}</td>
-                    <td className="num">{a.checkOutAt ? fmtTime(a.checkOutAt) : 'لسه'}</td>
+                    <td className="num" style={{ color: a.earlyLeave ? 'var(--amber)' : undefined }}>{a.checkOutAt ? fmtTime(a.checkOutAt) : 'لسه'}{a.method === 'odoo' ? <span className="muted" style={{ fontSize: 11 }}> · أودو</span> : null}</td>
                     <td className="num">{fmtDuration(minutesBetween(a.checkInAt, a.checkOutAt ?? new Date()))}</td>
                   </tr>
                 ))}
