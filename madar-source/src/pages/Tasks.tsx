@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { useStore, useUI } from '../lib/store'
 import { useCompanyMap, useUserMap, useVisibleTasks } from '../lib/access'
 import type { Priority, Task, TaskStatus } from '../lib/types'
-import { dueLabel, fmtDay, fmtMonth, hexA, PRIORITY_COLOR, PRIORITY_LABEL, PRIORITY_WEIGHT, sameDay, STATUS_LABEL, STATUS_ORDER } from '../lib/utils'
+import { dueLabel, fmtDay, fmtMonth, hexA, PRIORITY_COLOR, PRIORITY_LABEL, PRIORITY_WEIGHT, sameDay, STATUS_LABEL, STATUS_ORDER, ink } from '../lib/utils'
 import { TaskRow } from '../components/TaskRow'
 import { Avatar, Empty } from '../components/ui'
 import { Icon } from '../components/Icon'
@@ -91,7 +91,7 @@ function KanbanView({ tasks }: { tasks: Task[] }) {
   const users = useUserMap()
   const [dragId, setDragId] = useState<string | null>(null)
   const [over, setOver] = useState<TaskStatus | null>(null)
-  const COL_COLOR: Record<TaskStatus, string> = { todo: '#8B96B0', doing: '#22D3EE', review: '#FBBF24', done: '#34D399' }
+  const COL_COLOR: Record<TaskStatus, string> = { todo: '#76607F', doing: '#8B4CA8', review: '#B45309', done: '#15803D' }
 
   return (
     <div className="kanban">
@@ -130,10 +130,10 @@ function KanbanView({ tasks }: { tasks: Task[] }) {
                   onDragStart={(e) => { e.dataTransfer.setData('text/plain', t.id); e.dataTransfer.effectAllowed = 'move'; setDragId(t.id) }}
                   onDragEnd={() => { setDragId(null); setOver(null) }}
                   onClick={() => openTask(t.id)}
-                  style={{ borderInlineStart: `3px solid ${c?.color ?? '#22D3EE'}` }}
+                  style={{ borderInlineStart: `3px solid ${c?.color ?? '#8B4CA8'}` }}
                 >
                   <div className="row" style={{ fontSize: 12 }}>
-                    <span style={{ color: c?.color }}>{c?.short}</span>
+                    <span style={{ color: c ? ink(c.color) : undefined }}>{c?.short}</span>
                     <span className="spacer" />
                     <span style={{ color: PRIORITY_COLOR[t.priority] }}><Icon name="flag" size={12} /> {PRIORITY_LABEL[t.priority]}</span>
                   </div>
@@ -189,13 +189,13 @@ function CalendarView({ tasks }: { tasks: Task[] }) {
             <div
               key={d.toISOString()}
               className={`cal-day ${d.getMonth() !== cursor.getMonth() ? 'other' : ''} ${sameDay(d, today) ? 'today' : ''}`}
-              style={sameDay(d, picked) ? { background: 'rgba(34,211,238,0.10)' } : undefined}
+              style={sameDay(d, picked) ? { background: 'rgba(139,76,168,0.10)' } : undefined}
               onClick={() => setPicked(d)}
               onDoubleClick={() => { const x = new Date(d); x.setHours(12, 0, 0, 0); openNewTask({ dueAt: x.toISOString() }) }}
             >
               <span className="d num">{d.getDate()}</span>
               {evs.slice(0, 3).map((t) => {
-                const c = companies[t.companyId]?.color ?? '#22D3EE'
+                const c = companies[t.companyId]?.color ?? '#8B4CA8'
                 return (
                   <button key={t.id} className="cal-ev" style={{ background: hexA(c, t.status === 'done' ? 0.12 : 0.28), textDecoration: t.status === 'done' ? 'line-through' : 'none' }} onClick={(e) => { e.stopPropagation(); openTask(t.id) }} title={t.title}>
                     {t.title}

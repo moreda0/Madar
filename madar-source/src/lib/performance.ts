@@ -139,11 +139,11 @@ export const GRADE_LABEL: Record<ReviewGrade, string> = {
   weak: 'محتاج تحسين',
 }
 export const GRADE_COLOR: Record<ReviewGrade, string> = {
-  excellent: '#34D399',
-  very_good: '#7DE3F4',
-  good: '#A78BFA',
-  fair: '#FBBF24',
-  weak: '#FDA4AF',
+  excellent: '#15803D',
+  very_good: '#733A8F',
+  good: '#B5579A',
+  fair: '#B45309',
+  weak: '#BE3455',
 }
 export const RECOMMENDATION_LABEL: Record<ReviewRecommendation, string> = {
   promotion: 'ترقية',

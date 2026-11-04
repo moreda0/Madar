@@ -3,20 +3,20 @@ import { useStore, useUI } from '../lib/store'
 import { useCompanyMap } from '../lib/access'
 import { requestSystemNotifications } from '../lib/reminders'
 import type { NotificationKind } from '../lib/types'
-import { fmtShortDate, fmtTime, isToday } from '../lib/utils'
+import { fmtShortDate, fmtTime, isToday, ink } from '../lib/utils'
 import { Empty } from '../components/ui'
 import { Icon } from '../components/Icon'
 
 const KIND: Record<NotificationKind, { icon: string; color: string; label: string }> = {
-  assigned: { icon: 'user', color: '#22D3EE', label: 'تكليف' },
-  reminder: { icon: 'clock', color: '#FBBF24', label: 'تذكير' },
-  overdue: { icon: 'alert', color: '#F472B6', label: 'تنبيه تأخير' },
-  comment: { icon: 'comment', color: '#A78BFA', label: 'تعليق' },
-  status: { icon: 'check', color: '#34D399', label: 'تحديث' },
-  attendance: { icon: 'pin', color: '#7DE3F4', label: 'حضور' },
-  performance: { icon: 'chart', color: '#FBBF24', label: 'الأداء' },
-  meeting: { icon: 'mic', color: '#A78BFA', label: 'اجتماع' },
-  system: { icon: 'sparkle', color: '#C4B5FD', label: 'النظام' },
+  assigned: { icon: 'user', color: '#8B4CA8', label: 'تكليف' },
+  reminder: { icon: 'clock', color: '#B45309', label: 'تذكير' },
+  overdue: { icon: 'alert', color: '#C0397A', label: 'تنبيه تأخير' },
+  comment: { icon: 'comment', color: '#B5579A', label: 'تعليق' },
+  status: { icon: 'check', color: '#15803D', label: 'تحديث' },
+  attendance: { icon: 'pin', color: '#733A8F', label: 'حضور' },
+  performance: { icon: 'chart', color: '#B45309', label: 'الأداء' },
+  meeting: { icon: 'mic', color: '#B5579A', label: 'اجتماع' },
+  system: { icon: 'sparkle', color: '#8E3F79', label: 'النظام' },
 }
 
 export function Notifications() {
@@ -83,7 +83,7 @@ export function Notifications() {
                 <button
                   key={n.id}
                   className="task-row"
-                  style={{ alignItems: 'flex-start', background: n.read ? 'rgba(255,255,255,0.025)' : 'var(--panel-2)' }}
+                  style={{ alignItems: 'flex-start', background: n.read ? '#FFFFFF' : 'var(--panel-2)' }}
                   onClick={() => {
                     markRead(n.id)
                     if (n.taskId) openTask(n.taskId)
@@ -97,7 +97,7 @@ export function Notifications() {
                     <span className="soft" style={{ fontSize: 13 }}>{n.body}</span>
                     <span className="meta">
                       <span style={{ color: k.color }}>{k.label}</span>
-                      {c && <span style={{ color: c.color }}>{c.short}</span>}
+                      {c && <span style={{ color: ink(c.color) }}>{c.short}</span>}
                       <span className="num">{isToday(n.at) ? fmtTime(n.at) : `${fmtShortDate(n.at)} · ${fmtTime(n.at)}`}</span>
                     </span>
                   </span>
@@ -110,12 +110,12 @@ export function Notifications() {
       )}
 
       <div className="card row wrap" style={{ gap: 14, borderStyle: 'dashed' }}>
-        <Icon name="whatsapp" size={28} style={{ color: '#34D399' }} />
+        <Icon name="whatsapp" size={28} style={{ color: '#15803D' }} />
         <div style={{ flex: 1, minWidth: 200 }}>
           <div style={{ fontWeight: 600 }}>التنبيهات على واتساب (رايح جاي)</div>
           <div className="soft" style={{ fontSize: 13 }}>جاية في المرحلة الجاية: التنبيه يوصلك واتساب بأزرار، وردك هناك يحدّث المهمة هنا.</div>
         </div>
-        <span className="pill" style={{ background: 'rgba(52,211,153,.12)', color: '#A7F3D0' }}>قريباً</span>
+        <span className="pill" style={{ background: 'rgba(21,128,61,.10)', color: '#166534' }}>قريباً</span>
       </div>
     </div>
   )

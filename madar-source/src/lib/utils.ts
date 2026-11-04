@@ -110,10 +110,10 @@ export const PRIORITY_LABEL: Record<Priority, string> = {
   urgent: 'عاجلة',
 }
 export const PRIORITY_COLOR: Record<Priority, string> = {
-  low: '#8B96B0',
-  medium: '#7DE3F4',
-  high: '#FBBF24',
-  urgent: '#F472B6',
+  low: '#76607F',
+  medium: '#733A8F',
+  high: '#B45309',
+  urgent: '#C0397A',
 }
 export const PRIORITY_WEIGHT: Record<Priority, number> = { urgent: 0, high: 1, medium: 2, low: 3 }
 
@@ -137,7 +137,7 @@ export const REMIND_OPTIONS = [
   { v: 1440, label: 'قبلها بيوم' },
 ]
 
-export const COMPANY_COLORS = ['#22D3EE', '#A78BFA', '#FBBF24', '#34D399', '#F472B6', '#60A5FA', '#FB923C']
+export const COMPANY_COLORS = ['#8B4CA8', '#B5579A', '#B45309', '#15803D', '#C0397A', '#2563EB', '#C2410C']
 
 export const hexA = (hex: string, a: number) => {
   const h = hex.replace('#', '')
@@ -150,4 +150,14 @@ export const parseHM = (hm: string, base = new Date()) => {
   const d = new Date(base)
   d.setHours(h || 0, m || 0, 0, 0)
   return d
+}
+
+/** A company's color deep enough to read as text on the light mauve theme (old neon colors get darkened) */
+export const ink = (hex: string) => {
+  const h = hex.replace('#', '')
+  const n = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16)
+  let [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+  const lum = () => [r, g, b].map((v) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4 }).reduce((s, c, i) => s + c * [0.2126, 0.7152, 0.0722][i], 0)
+  for (let i = 0; i < 20 && 1.05 / (lum() + 0.05) < 4.6; i++) { r *= 0.9; g *= 0.9; b *= 0.9 }
+  return `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`
 }

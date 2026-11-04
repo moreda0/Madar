@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { ask, useStore, useUI } from '../lib/store'
 import { roleIn, useMyCompanies, useUserMap } from '../lib/access'
 import type { Company, ID, OrgUnit, Role, UnitType } from '../lib/types'
-import { COMPANY_COLORS, hexA, initialsOf, ROLE_LABEL, UNIT_LABEL } from '../lib/utils'
+import { COMPANY_COLORS, hexA, initialsOf, ROLE_LABEL, UNIT_LABEL, ink } from '../lib/utils'
 import { openTasksMessage, waLink, waNumber } from '../lib/whatsapp'
 import { Avatar, Empty, Overlay } from '../components/ui'
 import { Icon } from '../components/Icon'
@@ -33,10 +33,10 @@ export function Org() {
               className="card"
               onClick={() => setSel(c.id)}
               aria-pressed={on}
-              style={{ cursor: 'pointer', textAlign: 'start', borderColor: on ? c.color : hexA(c.color, 0.25), background: `linear-gradient(160deg, ${hexA(c.color, on ? 0.2 : 0.08)}, rgba(255,255,255,0.02))`, color: 'inherit' }}
+              style={{ cursor: 'pointer', textAlign: 'start', borderColor: on ? c.color : hexA(c.color, 0.25), background: `linear-gradient(160deg, ${hexA(c.color, on ? 0.2 : 0.08)}, rgba(255,255,255,0.9))`, color: 'inherit' }}
             >
               <div className="row">
-                <span style={{ width: 40, height: 40, borderRadius: 13, background: hexA(c.color, 0.2), color: c.color, display: 'grid', placeItems: 'center' }}><Icon name="building" /></span>
+                <span style={{ width: 40, height: 40, borderRadius: 13, background: hexA(c.color, 0.2), color: ink(c.color), display: 'grid', placeItems: 'center' }}><Icon name="building" /></span>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontFamily: 'var(--display)' }}>{c.name}</div>
                   <div className="muted" style={{ fontSize: 12 }}>{n} أعضاء · {ROLE_LABEL[roleIn(memberships, me, c.id) ?? 'employee']}</div>
@@ -101,11 +101,11 @@ function Node({ unit, all, isAdmin, color, onEdit }: { unit: OrgUnit; all: OrgUn
   const kids = all.filter((u) => u.parentId === unit.id)
   const count = memberships.filter((m) => m.unitId === unit.id).length
   const mgr = unit.managerId ? users[unit.managerId] : undefined
-  const tint = unit.type === 'division' ? color : unit.type === 'department' ? '#A78BFA' : '#FBBF24'
+  const tint = unit.type === 'division' ? color : unit.type === 'department' ? '#B5579A' : '#B45309'
   return (
     <div>
       <div className="tree-node">
-        <span className="pill" style={{ background: hexA(tint, 0.14), color: tint }}>{UNIT_LABEL[unit.type]}</span>
+        <span className="pill" style={{ background: hexA(tint, 0.14), color: ink(tint) }}>{UNIT_LABEL[unit.type]}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 600 }}>{unit.name}</div>
           <div className="muted" style={{ fontSize: 12 }}>{mgr ? `المدير: ${mgr.name}` : 'من غير مدير'} · {count} أعضاء</div>
@@ -351,7 +351,7 @@ function CompanySettings({ company, onDeleted }: { company: Company; onDeleted: 
           <div className="row wrap">
             {COMPANY_COLORS.map((col) => (
               <button type="button" key={col} aria-label={`لون ${col}`} aria-pressed={c.color === col} onClick={() => set('color', col)}
-                style={{ width: 36, height: 36, borderRadius: 12, background: col, border: c.color === col ? '3px solid #fff' : '3px solid transparent', boxShadow: `0 0 12px ${hexA(col, 0.5)}`, cursor: 'pointer' }} />
+                style={{ width: 36, height: 36, borderRadius: 12, background: col, border: c.color === col ? '3px solid #16101B' : '3px solid transparent', boxShadow: `0 0 12px ${hexA(col, 0.5)}`, cursor: 'pointer' }} />
             ))}
           </div>
         </div>

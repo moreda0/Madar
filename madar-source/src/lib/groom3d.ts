@@ -45,9 +45,9 @@ export async function mountGroom(canvas: HTMLCanvasElement): Promise<() => void>
   renderer.outputColorSpace = THREE.SRGBColorSpace
   const scene = new THREE.Scene()
   scene.add(mesh)
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x334455, 1.5))
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x8a6a96, 1.6))
   const key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(1, 2, 3); scene.add(key)
-  const rim = new THREE.DirectionalLight(0x7de3f4, 1.2); rim.position.set(-2, 1.5, -2); scene.add(rim)
+  const rim = new THREE.DirectionalLight(0xe2b8f0, 1.4); rim.position.set(-2, 1.5, -2); scene.add(rim)
   const cam = new THREE.PerspectiveCamera(30, canvas.clientWidth / canvas.clientHeight, 0.1, 20)
   cam.position.set(0, 1.0, 4.4); cam.lookAt(0, 0.9, 0)
 
@@ -60,7 +60,9 @@ export async function mountGroom(canvas: HTMLCanvasElement): Promise<() => void>
     lu.rotation.set(up, 0, 0.25); ll.rotation.set(lo, 0, lz)
     ru.rotation.set(up, 0, -0.25); rl.rotation.set(lo, 0, -lz)
     hd.rotation.set(0.05 * ph, 0, 0.08 * Math.sin(t * Math.PI * 2.6))
-    mesh.rotation.y = 0.35 * Math.sin(t * 1.4)
+    // entrance: one full turn so you see him all round, then a slow 3D sway
+    const spin = t < 1.1 ? (1 - (1 - t / 1.1) ** 3) * Math.PI * 2 : 0
+    mesh.rotation.y = spin + 0.6 * Math.sin(t * 1.3)
     mesh.position.y = 0.04 * ph
     renderer.render(scene, cam)
     raf = requestAnimationFrame(frame)

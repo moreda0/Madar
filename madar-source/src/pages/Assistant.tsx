@@ -188,7 +188,7 @@ export function Assistant() {
                       <div key={i} className="ai-action">
                         {a.type !== 'open' && <div style={{ fontSize: 13, flex: 1, minWidth: 0 }}>{actionLabel(a)}</div>}
                         {done ? (
-                          <span className="pill" style={{ background: 'rgba(52,211,153,.14)', color: 'var(--green)' }}><Icon name="check" size={14} /> اتعملت</span>
+                          <span className="pill" style={{ background: 'rgba(21,128,61,.10)', color: 'var(--green)' }}><Icon name="check" size={14} /> اتعملت</span>
                         ) : (
                           <div className="row" style={{ gap: 6 }}>
                             <button className="btn primary sm" onClick={() => run(m, a, i)}>

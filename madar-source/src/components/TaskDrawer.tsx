@@ -62,7 +62,7 @@ export function TaskDrawer() {
       <div className="stack" style={{ gap: 18 }}>
         <div className="row">
           <CompanyTag company={company} />
-          <span className="pill" style={{ background: 'rgba(255,255,255,.06)', color: PRIORITY_COLOR[task.priority] }}>
+          <span className="pill" style={{ background: 'rgba(139,76,168,.08)', color: PRIORITY_COLOR[task.priority] }}>
             <Icon name="flag" size={12} /> {PRIORITY_LABEL[task.priority]}
           </span>
           <span className="spacer" />

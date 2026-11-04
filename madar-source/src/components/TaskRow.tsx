@@ -15,7 +15,7 @@ export function TaskRow({ task, showCompany = true }: { task: Task; showCompany?
   const due = dueLabel(task.dueAt)
   const done = task.status === 'done'
   const subDone = task.subtasks.filter((s) => s.done).length
-  const color = company?.color ?? '#22D3EE'
+  const color = company?.color ?? '#8B4CA8'
 
   return (
     <div className={`task-row ${done ? 'done' : ''}`} onClick={() => openTask(task.id)} role="group" aria-label={task.title}>
