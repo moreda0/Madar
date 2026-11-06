@@ -31,6 +31,7 @@ export interface AssistantData {
   tasks: Task[]
   attendance: AttendanceRecord[]
   ratings: MonthlyRating[]
+  leaves?: import('./types').Leave[]
 }
 
 /* ---------- text helpers ---------- */
@@ -264,7 +265,7 @@ export function localAssistant(input: string, d: AssistantData, now = new Date()
   if (has(t, 'التزام', 'درجتي', 'درجه', 'تقييمي', 'سكور')) {
     const key = monthKey(now)
     const lines = myCompanies.map((c) => {
-      const s = monthScore({ tasks: d.tasks, attendance: d.attendance, ratings: d.ratings }, d.me, c.id, key, now)
+      const s = monthScore({ tasks: d.tasks, attendance: d.attendance, ratings: d.ratings, companies: d.companies, leaves: d.leaves }, d.me, c.id, key, now)
       return s.score === null ? `• ${c.short}: لسه مفيش بيانات كفاية الشهر ده` : `• ${c.short}: ${s.score} من 100`
     })
     return { text: `درجة التزامك الشهر ده:\n${lines.join('\n')}`, actions: [{ type: 'open', path: '/performance', label: 'تفاصيل الأداء' }] }

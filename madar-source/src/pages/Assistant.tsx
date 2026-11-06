@@ -43,7 +43,7 @@ const SpeechRec: (new () => SR) | undefined = (window as unknown as { SpeechReco
 
 function snapshot(): AssistantData {
   const s = useStore.getState()
-  return { me: s.currentUserId!, users: s.users, companies: s.companies, units: s.units, memberships: s.memberships, tasks: s.tasks, attendance: s.attendance, ratings: s.ratings }
+  return { me: s.currentUserId!, users: s.users, companies: s.companies, units: s.units, memberships: s.memberships, tasks: s.tasks, attendance: s.attendance, ratings: s.ratings, leaves: s.leaves }
 }
 
 /** Turn the online answer's flat action rows into checked actions (ids must exist) */

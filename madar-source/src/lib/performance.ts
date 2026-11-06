@@ -1,4 +1,4 @@
-import type { AttendanceRecord, ID, Kpi, MonthlyRating, RatingCriterion, ReviewGrade, ReviewRecommendation, Task } from './types'
+import type { AttendanceRecord, Company, ID, Kpi, Leave, MonthlyRating, RatingCriterion, ReviewGrade, ReviewRecommendation, Task } from './types'
 
 /* ---------- months ---------- */
 
@@ -26,7 +26,7 @@ export type PartKey = 'delivery' | 'punctuality' | 'plan' | 'rating' | 'quality'
 
 export const PARTS: { key: PartKey; label: string; weight: number; hint: string }[] = [
   { key: 'delivery', label: 'تسليم في الميعاد', weight: 35, hint: 'المهام اللي خلصت قبل ميعادها من كل مهام الشهر' },
-  { key: 'punctuality', label: 'الالتزام بالمواعيد', weight: 20, hint: 'أيام الحضور في الميعاد من كل أيام الحضور' },
+  { key: 'punctuality', label: 'الالتزام بالمواعيد', weight: 20, hint: 'أيام الحضور في الميعاد والانصراف في الميعاد، من كل أيام الشغل (الغياب من غير إجازة بيتحسب لو الشركة مفعّلاه)' },
   { key: 'plan', label: 'تنفيذ خطة اليوم', weight: 15, hint: 'المهام اللي خلصت من اللي اختارها مع الحضور' },
   { key: 'rating', label: 'تقييم المدير', weight: 20, hint: 'متوسط تقييم المدير الشهري' },
   { key: 'quality', label: 'جودة الشغل', weight: 10, hint: 'متوسط تقييم المهام بعد ما تخلص' },
@@ -50,6 +50,64 @@ interface ScoreInput {
   tasks: Task[]
   attendance: AttendanceRecord[]
   ratings: MonthlyRating[]
+  companies?: Company[]
+  leaves?: Leave[]
+}
+
+/* ---------- attendance days (Madar check-ins and Odoo) ---------- */
+
+const dayOf = (d: Date | string) => { const x = new Date(d); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}` }
+export const DEFAULT_WORKDAYS = [0, 1, 2, 3, 4] // Sunday .. Thursday
+
+export interface AttendanceMonth {
+  present: number
+  onTime: number // came on time and didn't leave early
+  late: number
+  early: number
+  absent: number
+  absentDays: string[]
+}
+
+/**
+ * One person's attendance in one company for a month, counted by day: a day with several
+ * check-ins (a break, Odoo + Madar) counts once, judged by its first check-in and last check-out.
+ */
+export function attendanceMonth(data: ScoreInput, userId: ID, companyId: ID, key: string, now = new Date()): AttendanceMonth {
+  const all = data.attendance.filter((a) => a.userId === userId && a.companyId === companyId)
+  const days = new Map<string, AttendanceRecord[]>()
+  for (const a of all) if (inMonth(a.checkInAt, key)) { const k = dayOf(a.checkInAt); days.set(k, [...(days.get(k) ?? []), a]) }
+  let onTime = 0, late = 0, early = 0
+  for (const recs of days.values()) {
+    const first = recs.reduce((x, y) => (x.checkInAt <= y.checkInAt ? x : y))
+    const outs = recs.filter((r) => r.checkOutAt)
+    const last = outs.length ? outs.reduce((x, y) => (x.checkOutAt! >= y.checkOutAt! ? x : y)) : null
+    const isLate = first.late
+    const isEarly = !!last?.earlyLeave
+    if (isLate) late++
+    if (isEarly) early++
+    if (!isLate && !isEarly) onTime++
+  }
+
+  const absentDays: string[] = []
+  const company = data.companies?.find((c) => c.id === companyId)
+  if (company?.countAbsence && all.length) {
+    // only from the first day this person has any attendance here, so nobody is marked absent before they started
+    const first = new Date(all.reduce((m, a) => (a.checkInAt < m ? a.checkInAt : m), all[0].checkInAt))
+    first.setHours(0, 0, 0, 0)
+    const start = new Date(Math.max(+monthStart(key), +first))
+    const end = new Date(Math.min(+monthStart(shiftMonth(key, 1)), +new Date(now.getFullYear(), now.getMonth(), now.getDate()))) // up to yesterday
+    const work = company.workDays?.length ? company.workDays : DEFAULT_WORKDAYS
+    const off = (data.leaves ?? []).filter((l) => (l.userId ? l.userId === userId : !l.companyId || l.companyId === companyId))
+    for (const d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+      if (!work.includes(d.getDay())) continue
+      const k = dayOf(d)
+      if (days.has(k)) continue
+      const ds = +d, de = ds + 864e5
+      if (off.some((l) => Date.parse(l.from) < de && Date.parse(l.to) > ds)) continue
+      absentDays.push(k)
+    }
+  }
+  return { present: days.size, onTime, late, early, absent: absentDays.length, absentDays }
 }
 
 export const CRITERIA: { key: RatingCriterion; label: string }[] = [
@@ -70,7 +128,9 @@ export function monthScore(data: ScoreInput, userId: ID, companyId: ID, key: str
   const onTime = due.filter((t) => t.status === 'done' && t.completedAt && new Date(t.completedAt) <= new Date(t.dueAt!))
 
   const att = data.attendance.filter((a) => a.userId === userId && a.companyId === companyId && inMonth(a.checkInAt, key))
-  const punctual = att.filter((a) => !a.late)
+  const am = attendanceMonth(data, userId, companyId, key, now)
+  const workDays = am.present + am.absent
+  const extra = [am.late && `تأخير ${am.late}`, am.early && `خروج بدري ${am.early}`, am.absent && `غياب ${am.absent}`].filter(Boolean).join(' · ')
 
   const planned = att.flatMap((a) => a.plannedTaskIds)
   const plannedDone = planned.filter((id) => {
@@ -85,7 +145,7 @@ export function monthScore(data: ScoreInput, userId: ID, companyId: ID, key: str
 
   const values: Record<PartKey, { v: number | null; d: string }> = {
     delivery: { v: due.length ? onTime.length / due.length : null, d: due.length ? `${onTime.length} من ${due.length} مهمة` : 'مفيش مهام مستحقة' },
-    punctuality: { v: att.length ? punctual.length / att.length : null, d: att.length ? `${punctual.length} من ${att.length} يوم` : 'مفيش حضور مسجل' },
+    punctuality: { v: workDays ? am.onTime / workDays : null, d: workDays ? `${am.onTime} من ${workDays} يوم في الميعاد${extra ? ` (${extra})` : ''}` : 'مفيش حضور مسجل' },
     plan: { v: planned.length ? plannedDone.length / planned.length : null, d: planned.length ? `${plannedDone.length} من ${planned.length} مهمة` : 'مفيش خطط يومية' },
     rating: { v: rating ? (ratingAvg(rating) - 1) / 4 : null, d: rating ? `${ratingAvg(rating).toFixed(1)} من 5` : 'لسه ما اتقيمش' },
     quality: { v: quality !== null ? (quality - 1) / 4 : null, d: quality !== null ? `${quality.toFixed(1)} من 5 (${rated.length} مهمة)` : 'مفيش مهام متقيمة' },
