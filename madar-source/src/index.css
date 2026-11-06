@@ -375,26 +375,3 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
 .draft-task { padding: 12px 14px; }
 .draft-task.off { opacity: 0.5; }
 .draft-task .select, .draft-task .input[type='datetime-local'] { min-height: 38px; padding: 6px 10px; }
-
-/* Madar mascot: pops up in the bottom-right corner in 3D, spins once, claps with confetti, then fades. Doesn't block the app. */
-.mascot-layer { position: fixed; inset: 0; z-index: 90; overflow: hidden; pointer-events: none; animation: mascot-fade 0.5s ease-in 5.5s both; }
-.mascot { position: absolute; right: 18px; bottom: 18px; width: min(30vw, 132px); pointer-events: auto; cursor: pointer;
-  animation: mascot-drop 0.8s cubic-bezier(.2,1.35,.4,1) both; filter: drop-shadow(0 10px 14px rgba(80, 40, 100, .28)); }
-.mascot-shadow { position: absolute; left: 18%; right: 18%; bottom: -4px; height: 12px; border-radius: 50%; background: radial-gradient(closest-side, rgba(60, 25, 80, .35), transparent); z-index: -1; }
-@media (max-width: 899px) { .mascot { bottom: calc(var(--nav-h) + max(12px, env(safe-area-inset-bottom)) + 10px); right: 14px; width: min(28vw, 112px); } }
-.groom { position: relative; aspect-ratio: 10 / 17; }
-.groom canvas { position: absolute; inset: 0; width: 100%; height: 100%; transition: opacity .2s; }
-.mascot .fig { position: absolute; inset: 0 18%; aspect-ratio: auto; animation: mascot-hop 0.32s ease-in-out 0.9s infinite alternate; }
-.mascot .fig img { position: absolute; inset: 0; width: 100%; height: 100%; }
-.mascot .larm { transform-origin: 13% 40%; animation: clap-l 0.32s ease-in-out 0.9s infinite alternate; }
-.mascot .rarm { transform-origin: 87% 40%; animation: clap-r 0.32s ease-in-out 0.9s infinite alternate; }
-.mascot .head { transform-origin: 45% 34%; animation: bobble 0.64s ease-in-out 0.9s infinite alternate; }
-.confetti { position: absolute; top: -12px; width: 8px; height: 12px; box-shadow: 0 0 0 1px rgba(80, 40, 100, .12); border-radius: 2px; opacity: 0; animation: confetti 2.6s ease-in both; }
-@keyframes mascot-drop { from { transform: translateY(70%) scale(.3); opacity: 0; } 60% { opacity: 1; } to { transform: none; } }
-@keyframes mascot-hop { to { transform: translateY(-6px); } }
-@keyframes clap-l { from { transform: rotate(-4deg); } to { transform: rotate(-27deg); } }
-@keyframes clap-r { from { transform: rotate(4deg); } to { transform: rotate(27deg); } }
-@keyframes bobble { from { transform: rotate(-5deg); } to { transform: rotate(5deg) translateY(-3px); } }
-@keyframes confetti { 0% { opacity: 1; transform: translate(0, 0) rotate(0); } 100% { opacity: .9; transform: translate(var(--drift), 105vh) rotate(720deg); } }
-@keyframes mascot-fade { to { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .mascot, .mascot .fig, .mascot .fig img, .confetti { animation: none; } .confetti { display: none; } }
