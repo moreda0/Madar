@@ -6,7 +6,6 @@ import { Avatar, CompanyChips, ConfirmDialog, Toasts, useUnreadCount } from './u
 import { SyncDot, logoutEverywhere } from './Sync'
 import { Icon } from './Icon'
 import { TaskDrawer } from './TaskDrawer'
-import { Mascot, preloadGroom } from './Mascot'
 import { NewTaskModal } from './TaskForm'
 import { useReminderEngine } from '../lib/reminders'
 import { enablePush } from '../lib/push'
@@ -51,7 +50,6 @@ export function Layout() {
   // once signed in, keep this device's closed-app notifications registered (never prompts)
   const signedIn = useSync((s) => s.status === 'synced' || s.status === 'saving')
   useEffect(() => { if (signedIn) enablePush(true) }, [signedIn])
-  useEffect(() => { preloadGroom() }, [])
   const linkedTask = new URLSearchParams(loc.search).get('t')
   useEffect(() => {
     if (!linkedTask) return
@@ -138,7 +136,6 @@ export function Layout() {
       <NewTaskModal />
       <ConfirmDialog />
       <Toasts />
-      <Mascot />
     </div>
   )
 }
