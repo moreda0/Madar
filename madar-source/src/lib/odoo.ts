@@ -4,10 +4,10 @@ import { getClient, useSync } from './sync'
 export interface OdooResult {
   at: string
   mode?: 'json2' | 'jsonrpc'
-  companies?: { id: number; name: string; madarId: string | null }[]
+  odooCompanies?: string[]
   employees?: number
   matched?: number
-  unmatchedEmployees?: { id: number; name: string; email: string | null; company: string | null }[]
+  unmatchedEmployees?: { id: number; name: string; email: string | null }[]
   pulled?: number
   added?: number
   changed?: number
@@ -17,8 +17,8 @@ export interface OdooResult {
   lastError?: { at: string; error: string; detail?: string }
 }
 
-export interface OdooStatus {
-  configured: boolean
+export interface OdooConnection {
+  companyId: string
   url?: string
   db?: string
   login?: string
@@ -36,7 +36,8 @@ export const ODOO_ERRORS: Record<string, string> = {
   'bad-login': 'أودو رفض الدخول. اتأكدي من الإيميل ومفتاح الـ API (ولو أودو أونلاين، الربط محتاج باقة Custom).',
   unreachable: 'مش قادرين نوصل لسيرفر أودو. لو السيرفر جوه الشركة بس، لازم يبقى متاح على النت.',
   'odoo-error': 'أودو رجّع خطأ.',
-  'not-configured': 'أودو لسه مش مربوط.',
+  'not-configured': 'أودو لسه مش مربوط للشركة دي.',
+  'no-company': 'الشركة دي مش موجودة في مدار.',
   'owner-only': 'صاحبة مدار بس اللي تقدر تغيّر ربط أودو.',
   'not-member': 'الإيميل ده مش متضاف في مدار.',
   'no-table': 'جدول ربط أودو لسه مش متعمل على السيرفر.',
@@ -45,7 +46,7 @@ export const ODOO_ERRORS: Record<string, string> = {
 }
 
 /** Calls the function; throws an Arabic message */
-export async function odoo(action: 'status' | 'sync' | 'resync' | 'disconnect' | 'configure', extra: Record<string, unknown> = {}): Promise<OdooStatus> {
+export async function odoo<T = OdooConnection>(action: 'status' | 'sync' | 'resync' | 'disconnect' | 'configure', extra: Record<string, unknown> = {}): Promise<T> {
   const c = getClient()
   const st = useSync.getState()
   if (!c || !st.email) throw new Error('لازم المزامنة أونلاين تكون شغالة ومتسجلة دخول.')
@@ -57,5 +58,5 @@ export async function odoo(action: 'status' | 'sync' | 'resync' | 'disconnect' |
     const msg = ODOO_ERRORS[j.error ?? ''] ?? (res?.status === 404 ? ODOO_ERRORS.missingFn : 'حصلت مشكلة، جربي تاني كمان شوية.')
     throw new Error(j.error === 'odoo-error' && j.detail ? `${msg} ${j.detail}` : msg)
   }
-  return data as OdooStatus
+  return data as T
 }

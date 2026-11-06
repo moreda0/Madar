@@ -35,8 +35,8 @@ export interface Company {
   strictGeofence: boolean
   qrSecret: string
   sample?: boolean
-  /** linked company in Odoo (res.company id): its check-ins/outs come into Madar */
-  odooCompanyId?: number
+  /** this company's attendance comes from its own Odoo database (madar-odoo) */
+  odooLinked?: boolean
   /** working days, 0 = Sunday … 6 = Saturday. Default Sunday to Thursday */
   workDays?: number[]
   /** a working day with no check-in and no approved leave counts against the person */

@@ -1,16 +1,17 @@
 // مدار: attendance from Odoo (Supabase Edge Function "madar-odoo", JWT verification OFF).
 //
-// Pulls check-ins/outs (hr.attendance), approved time off (hr.leave) and public holidays
-// (resource.calendar.leaves) from Odoo, matches each Odoo employee to a Madar person
-// (work email, then phone, then name), decides late / left early from each Madar company's
-// hours, and saves them as normal Madar records, so they count in the monthly commitment score.
+// Each Madar company can have its own Odoo database. From each one it pulls check-ins/outs
+// (hr.attendance), approved time off (hr.leave) and public holidays (resource.calendar.leaves),
+// matches each Odoo employee to a Madar person (work email, then phone, then name), decides
+// late / left early from that company's hours, and saves them as normal Madar records, so they
+// count in the monthly commitment score.
 //
-//   {tick: true}                                 Cron, every 10 minutes (supabase/odoo.sql)
-//   {action: 'status'}                           any member: what's connected, last result (never the key)
-//   {action: 'sync'}                             any member: pull now
-//   {action: 'configure', url, db, login, apiKey, tz?, since?}   owner: test + save the connection, then pull
-//   {action: 'resync'}                           owner: pull the whole history again (after changing company links)
-//   {action: 'disconnect'}                       owner: forget the connection (imported days stay)
+//   {tick: true}                                            Cron, every 10 minutes (supabase/odoo.sql): every connection
+//   {action: 'status'}                                      any member: all connections, last results (never a key)
+//   {action: 'sync', companyId}                             any member: pull now
+//   {action: 'configure', companyId, url, db, login, apiKey, tz?, since?}   owner: test + save, then pull
+//   {action: 'resync', companyId}                           owner: pull the whole history again
+//   {action: 'disconnect', companyId}                       owner: forget the connection (imported days stay)
 //
 // Works with Odoo Online and self-hosted. Tries Odoo's JSON-2 API (Odoo 19+) first and falls
 // back to the classic /jsonrpc API. Odoo Online only opens its API on the Custom plan.
@@ -31,7 +32,7 @@ const db = () => createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KE
 
 /* ---------- Odoo client ---------- */
 
-interface Cfg { url: string; db: string; login: string; api_key: string; tz: string; cursor: string | null; since: string | null; last_sync: string | null; last_result: Rec | null }
+interface Cfg { company_id: string; url: string; db: string; login: string; api_key: string; tz: string; cursor: string | null; since: string | null; last_sync: string | null; last_result: Rec | null }
 
 class Odoo {
   mode: 'json2' | 'jsonrpc' | null = null
@@ -161,15 +162,20 @@ async function load(kind: string, idLike?: string): Promise<Rec[]> {
   }
 }
 
-async function getCfg(): Promise<Cfg | null> {
-  const { data, error } = await db().from('odoo_config').select('*').eq('id', 1).maybeSingle()
+async function getCfg(companyId: string): Promise<Cfg | null> {
+  const { data, error } = await db().from('odoo_connections').select('*').eq('company_id', companyId).maybeSingle()
   if (error) throw new Fail('no-table', 500, error.message)
   return data as Cfg | null
+}
+async function allCfgs(): Promise<Cfg[]> {
+  const { data, error } = await db().from('odoo_connections').select('*')
+  if (error) throw new Fail('no-table', 500, error.message)
+  return (data ?? []) as Cfg[]
 }
 
 const rid = (p: string) => p + crypto.randomUUID().replace(/-/g, '').slice(0, 10)
 
-/* ---------- the pull ---------- */
+/* ---------- the pull: one Odoo database -> one Madar company ---------- */
 
 async function sync(cfg: Cfg, full = false) {
   const odoo = new Odoo(cfg)
@@ -177,78 +183,64 @@ async function sync(cfg: Cfg, full = false) {
   const tz = cfg.tz || 'Africa/Cairo'
   const since = cfg.since ? new Date(cfg.since + 'T00:00:00Z') : (() => { const d = new Date(); d.setUTCMonth(d.getUTCMonth() - 2, 1); d.setUTCHours(0, 0, 0, 0); return d })()
   const sinceStr = toOdoo(since)
+  const cid = cfg.company_id
+  const pre = `odoo_${cid}_`
 
   const oCompanies: Rec[] = await odoo.call('res.company', 'search_read', { domain: [], fields: ['name'], context: {} })
   const context = { allowed_company_ids: oCompanies.map((c) => c.id), tz, active_test: false }
-  const employees = await odoo.searchReadAll('hr.employee', [], ['name', 'work_email', 'mobile_phone', 'work_phone', 'company_id', 'user_id'], context)
+  const employees = await odoo.searchReadAll('hr.employee', [], ['name', 'work_email', 'mobile_phone', 'work_phone', 'company_id'], context)
 
-  const [users, memberships, companies, existing, existingLeaves] = await Promise.all([
-    load('users'), load('memberships'), load('companies'), load('attendance', 'odoo_%'), load('leaves', 'odoo_%'),
+  const [users, memberships, companies, existingAll, existingLeavesAll] = await Promise.all([
+    load('users'), load('memberships'), load('companies'), load('attendance', `${pre}%`), load('leaves', `${pre}%`),
   ])
-  const byEmail = new Map(users.filter((u) => u.email).map((u) => [String(u.email).toLowerCase().trim(), u]))
-  const byPhone = new Map(users.filter((u) => normPhone(u.phone).length >= 9).map((u) => [normPhone(u.phone).slice(-9), u]))
-  const byName = new Map(users.map((u) => [normName(u.name), u]))
+  const company = companies.find((c) => c.id === cid)
+  if (!company) throw new Fail('no-company', 404)
+  const existing = existingAll, existingLeaves = existingLeavesAll
 
-  // Odoo company -> Madar company: the link set in Madar's settings, else the same name
-  const companyFor = (oc: [number, string] | null) => {
-    if (!oc) return undefined
-    return companies.find((c) => Number(c.odooCompanyId) === oc[0]) ?? companies.find((c) => !c.odooCompanyId && normName(c.name) === normName(oc[1]))
+  // match people: work email, then phone, then name. People of this company first, then anyone in Madar.
+  const inCo = new Set(memberships.filter((m) => m.companyId === cid).map((m) => m.userId))
+  const ranked = [...users.filter((u) => inCo.has(u.id)), ...users.filter((u) => !inCo.has(u.id))]
+  const byEmail = new Map<string, Rec>(), byPhone = new Map<string, Rec>(), byName = new Map<string, Rec>()
+  for (const u of [...ranked].reverse()) {
+    if (u.email) byEmail.set(String(u.email).toLowerCase().trim(), u)
+    if (normPhone(u.phone).length >= 9) byPhone.set(normPhone(u.phone).slice(-9), u)
+    byName.set(normName(u.name), u)
   }
-
   const empUser = new Map<number, Rec>()
-  const unmatched: string[] = []
   for (const e of employees) {
     const u = byEmail.get(String(e.work_email || '').toLowerCase().trim())
       ?? byPhone.get(normPhone(e.mobile_phone).slice(-9) || '-') ?? byPhone.get(normPhone(e.work_phone).slice(-9) || '-')
       ?? byName.get(normName(e.name))
     if (u) empUser.set(e.id, u)
   }
-  const empById = new Map(employees.map((e) => [e.id, e]))
-
-  const madarCompanyOf = (userId: string, emp: Rec | undefined) => {
-    const c = companyFor(m2o(emp?.company_id))
-    if (c) return c
-    const mine = memberships.filter((m) => m.userId === userId).map((m) => companies.find((c) => c.id === m.companyId)).filter(Boolean)
-    return mine.length === 1 ? mine[0] : undefined
-  }
 
   // ---- check-ins / outs
   const domain = !full && cfg.cursor ? [['write_date', '>=', cfg.cursor]] : [['check_in', '>=', sinceStr]]
-  const atts = await odoo.searchReadAll('hr.attendance', domain, ['employee_id', 'check_in', 'check_out', 'write_date', 'worked_hours'], context, 'write_date asc, id asc')
+  const atts = await odoo.searchReadAll('hr.attendance', domain, ['employee_id', 'check_in', 'check_out', 'write_date'], context, 'write_date asc, id asc')
 
   const old = new Map(existing.map((a) => [a.id, a]))
   const rows: { kind: string; id: string; data: Rec; deleted: boolean }[] = []
-  const unmatchedIds = new Set<number>()
   const lateNow: Rec[] = []
   let cursor = cfg.cursor ?? ''
   let added = 0, changed = 0
+  const grace = Number(company.graceMinutes ?? 0)
   for (const a of atts) {
     if (a.write_date && a.write_date > cursor) cursor = a.write_date
     const ref = m2o(a.employee_id)
     const user = ref && empUser.get(ref[0])
-    if (!user) { if (ref) unmatchedIds.add(ref[0]); continue }
-    const company = madarCompanyOf(user.id, empById.get(ref![0]))
-    if (!company) { unmatchedIds.add(ref![0]); continue }
+    if (!user) continue
     const checkInAt = fromOdoo(a.check_in)!
     const checkOutAt = fromOdoo(a.check_out)
-    const grace = Number(company.graceMinutes ?? 0)
     const late = local(checkInAt, tz).min > hm(company.workStart, 540) + grace
     const earlyLeave = !!checkOutAt && local(checkOutAt, tz).min < hm(company.workEnd, 1020) - grace
-    const id = `odoo_${a.id}`
+    const id = `${pre}${a.id}`
     const prev = old.get(id)
-    const data: Rec = {
-      ...(prev ?? {}),
-      id, userId: user.id, companyId: company.id, checkInAt, method: 'odoo', late, earlyLeave,
-      plannedTaskIds: prev?.plannedTaskIds ?? [], odooId: a.id,
-    }
+    const data: Rec = { ...(prev ?? {}), id, userId: user.id, companyId: cid, checkInAt, method: 'odoo', late, earlyLeave, plannedTaskIds: prev?.plannedTaskIds ?? [], odooId: a.id }
     if (checkOutAt) data.checkOutAt = checkOutAt; else delete data.checkOutAt
     if (prev && JSON.stringify(prev) === JSON.stringify(data)) continue
     rows.push({ kind: 'attendance', id, data, deleted: false })
     if (prev) changed++
-    else {
-      added++
-      if (late && Date.now() - Date.parse(checkInAt) < 3 * 3600e3) lateNow.push(data)
-    }
+    else { added++; if (late && Date.now() - Date.parse(checkInAt) < 3 * 3600e3) lateNow.push(data) }
   }
 
   // ---- days deleted in Odoo during the last 40 days
@@ -270,35 +262,26 @@ async function sync(cfg: Cfg, full = false) {
     for (const l of leaves) {
       const ref = m2o(l.employee_id)
       const user = ref && empUser.get(ref[0])
-      if (!user) continue
-      leaveRows.push({ id: `odoo_leave_${l.id}`, userId: user.id, companyId: madarCompanyOf(user.id, empById.get(ref![0]))?.id, from: fromOdoo(l.date_from), to: fromOdoo(l.date_to), type: m2o(l.holiday_status_id)?.[1] ?? 'إجازة', source: 'odoo' })
+      if (user) leaveRows.push({ id: `${pre}leave_${l.id}`, userId: user.id, companyId: cid, from: fromOdoo(l.date_from), to: fromOdoo(l.date_to), type: m2o(l.holiday_status_id)?.[1] ?? 'إجازة', source: 'odoo' })
     }
-  } catch (e) { if (!(e instanceof Fail && e.code === 'no-model')) notes.push('leaves: ' + (e as Error).message); else notes.push('no-time-off-app') }
+  } catch (e) { notes.push(e instanceof Fail && e.code === 'no-model' ? 'no-time-off-app' : 'leaves: ' + (e as Error).message) }
   try {
-    const hol = await odoo.searchReadAll('resource.calendar.leaves', [['resource_id', '=', false], ['date_to', '>=', sinceStr]], ['name', 'date_from', 'date_to', 'company_id'], context)
-    for (const h of hol) {
-      const oc = m2o(h.company_id)
-      const c = companyFor(oc)
-      if (oc && !c) continue // a holiday of a company that isn't in Madar
-      leaveRows.push({ id: `odoo_hol_${h.id}`, companyId: c?.id, from: fromOdoo(h.date_from), to: fromOdoo(h.date_to), type: h.name || 'إجازة رسمية', holiday: true, source: 'odoo' })
-    }
+    const hol = await odoo.searchReadAll('resource.calendar.leaves', [['resource_id', '=', false], ['date_to', '>=', sinceStr]], ['name', 'date_from', 'date_to'], context)
+    for (const h of hol) leaveRows.push({ id: `${pre}hol_${h.id}`, companyId: cid, from: fromOdoo(h.date_from), to: fromOdoo(h.date_to), type: h.name || 'إجازة رسمية', holiday: true, source: 'odoo' })
   } catch (e) { notes.push('holidays: ' + (e as Error).message) }
   const oldLeaves = new Map(existingLeaves.map((l) => [l.id, l]))
   for (const l of leaveRows) {
     if (!l.from || !l.to) continue
-    for (const k of Object.keys(l)) if (l[k] === undefined) delete l[k]
     if (JSON.stringify(oldLeaves.get(l.id)) !== JSON.stringify(l)) rows.push({ kind: 'leaves', id: l.id, data: l, deleted: false })
     oldLeaves.delete(l.id)
   }
-  // cancelled in Odoo
   for (const l of oldLeaves.values()) if (Date.parse(l.to) >= +since) rows.push({ kind: 'leaves', id: l.id, data: l, deleted: true })
 
-  // ---- tell managers about late arrivals that just happened
+  // ---- tell the company's managers about late arrivals that just happened
   const nameOf = (id: string) => users.find((u) => u.id === id)?.name ?? ''
   for (const a of lateNow) {
-    const c = companies.find((x) => x.id === a.companyId)
-    for (const m of memberships.filter((m) => m.companyId === a.companyId && m.role !== 'employee' && m.userId !== a.userId)) {
-      const n = { id: rid('n_'), userId: m.userId, companyId: a.companyId, kind: 'attendance', title: `${nameOf(a.userId)} سجّل حضور متأخر (أودو)`, body: `${c?.short ?? ''} · الساعة ${new Date(a.checkInAt).toLocaleTimeString('ar-EG', { timeZone: tz, hour: 'numeric', minute: '2-digit' })}`, at: new Date().toISOString(), read: false }
+    for (const m of memberships.filter((m) => m.companyId === cid && m.role !== 'employee' && m.userId !== a.userId)) {
+      const n = { id: rid('n_'), userId: m.userId, companyId: cid, kind: 'attendance', title: `${nameOf(a.userId)} سجّل حضور متأخر (أودو)`, body: `${company.short ?? ''} · الساعة ${new Date(a.checkInAt).toLocaleTimeString('ar-EG', { timeZone: tz, hour: 'numeric', minute: '2-digit' })}`, at: new Date().toISOString(), read: false }
       rows.push({ kind: 'notifications', id: n.id, data: n, deleted: false })
     }
   }
@@ -308,16 +291,14 @@ async function sync(cfg: Cfg, full = false) {
     if (error) throw new Fail('save-failed', 500, error.message)
   }
 
-  for (const id of unmatchedIds) { const e = empById.get(id); if (e) unmatched.push(e.name) }
   const result = {
     at: new Date().toISOString(), mode: odoo.mode, full,
-    companies: oCompanies.map((c) => ({ id: c.id, name: c.name, madarId: companyFor([c.id, c.name])?.id ?? null })),
+    odooCompanies: oCompanies.map((c) => c.name),
     employees: employees.length, matched: empUser.size,
-    unmatchedEmployees: employees.filter((e) => !empUser.has(e.id)).map((e) => ({ id: e.id, name: e.name, email: e.work_email || null, company: m2o(e.company_id)?.[1] ?? null })).slice(0, 200),
-    skipped: unmatched.slice(0, 50),
+    unmatchedEmployees: employees.filter((e) => !empUser.has(e.id)).map((e) => ({ id: e.id, name: e.name, email: e.work_email || null })).slice(0, 200),
     pulled: atts.length, added, changed, removed, leaves: leaveRows.length, notes,
   }
-  await db().from('odoo_config').update({ cursor: cursor || null, last_sync: result.at, last_result: result, since: cfg.since ?? since.toISOString().slice(0, 10) }).eq('id', 1)
+  await db().from('odoo_connections').update({ cursor: cursor || null, last_sync: result.at, last_result: result, since: cfg.since ?? since.toISOString().slice(0, 10) }).eq('company_id', cid)
   return result
 }
 
@@ -331,39 +312,48 @@ async function who(req: Request): Promise<'owner' | 'member'> {
   throw new Fail('not-member', 403)
 }
 
-const publicCfg = (c: Cfg | null) => c ? { configured: true, url: c.url, db: c.db, login: c.login, tz: c.tz, since: c.since, lastSync: c.last_sync, lastResult: c.last_result } : { configured: false }
+const publicCfg = (c: Cfg) => ({ companyId: c.company_id, url: c.url, db: c.db, login: c.login, tz: c.tz, since: c.since, lastSync: c.last_sync, lastResult: c.last_result })
+
+async function syncSafe(cfg: Cfg, full = false) {
+  try { return await sync(cfg, full) } catch (e) {
+    const err = { at: new Date().toISOString(), error: e instanceof Fail ? e.code : 'failed', detail: e instanceof Fail ? e.detail : String(e) }
+    await db().from('odoo_connections').update({ last_sync: err.at, last_result: { ...(cfg.last_result ?? {}), lastError: err } }).eq('company_id', cfg.company_id)
+    throw e
+  }
+}
 
 async function handle(req: Request) {
   let body: Rec
   try { body = await req.json() } catch { throw new Fail('bad-json') }
 
   if (body.tick) {
-    const cfg = await getCfg()
-    if (!cfg) return { skipped: 'not-configured' }
-    if (cfg.last_sync && Date.now() - Date.parse(cfg.last_sync) < 4 * 60e3) return { skipped: 'recent' }
-    try { return await sync(cfg) } catch (e) {
-      const err = { at: new Date().toISOString(), error: e instanceof Fail ? e.code : 'failed', detail: e instanceof Fail ? e.detail : String(e) }
-      await db().from('odoo_config').update({ last_sync: err.at, last_result: { ...(cfg.last_result ?? {}), lastError: err } }).eq('id', 1)
-      throw e
+    const out: Rec = {}
+    for (const cfg of await allCfgs()) {
+      if (cfg.last_sync && Date.now() - Date.parse(cfg.last_sync) < 4 * 60e3) { out[cfg.company_id] = 'recent'; continue }
+      try { const r = await syncSafe(cfg); out[cfg.company_id] = { added: r.added, changed: r.changed } } catch (e) { out[cfg.company_id] = { error: (e as Error).message } }
     }
+    return out
   }
 
   const role = await who(req)
   const action = String(body.action ?? 'status')
-  if (action === 'status') return publicCfg(await getCfg())
-  if (action === 'sync') {
-    const cfg = await getCfg()
-    if (!cfg) throw new Fail('not-configured', 409)
-    return { ...publicCfg(cfg), lastResult: await sync(cfg) }
-  }
+  if (action === 'status') return { connections: (await allCfgs()).map(publicCfg) }
+
+  const companyId = String(body.companyId ?? '')
+  if (!companyId) throw new Fail('missing-company')
+  const need = async () => { const c = await getCfg(companyId); if (!c) throw new Fail('not-configured', 409); return c }
+  const done = async (r: Rec) => ({ ...publicCfg((await getCfg(companyId))!), lastResult: r })
+
+  if (action === 'sync') return done(await syncSafe(await need()))
   if (role !== 'owner') throw new Fail('owner-only', 403)
 
   if (action === 'configure') {
-    const old = await getCfg()
+    const old = await getCfg(companyId)
     let url = String(body.url ?? '').trim()
     if (url && !/^https?:\/\//i.test(url)) url = 'https://' + url
-    try { const u = new URL(url); url = u.origin } catch { throw new Fail('bad-url') }
+    try { url = new URL(url).origin } catch { throw new Fail('bad-url') }
     const next = {
+      company_id: companyId,
       url,
       db: String(body.db ?? '').trim(),
       login: String(body.login ?? '').trim(),
@@ -372,22 +362,16 @@ async function handle(req: Request) {
       since: /^\d{4}-\d{2}-\d{2}$/.test(String(body.since ?? '')) ? String(body.since) : old?.since ?? null,
     }
     if (!next.login || !next.api_key) throw new Fail('missing')
-    const o = new Odoo(next)
-    await o.connect() // throws bad-login / bad-url / need-db
-    const same = old && old.url === next.url && old.db === next.db
-    const { error } = await db().from('odoo_config').upsert({ id: 1, ...next, cursor: same ? old!.cursor : null, updated_at: new Date().toISOString() })
+    await new Odoo(next).connect() // throws bad-login / bad-url / need-db
+    const same = !!old && old.url === next.url && old.db === next.db
+    const { error } = await db().from('odoo_connections').upsert({ ...next, cursor: same ? old!.cursor : null, updated_at: new Date().toISOString() }, { onConflict: 'company_id' })
     if (error) throw new Fail('save-failed', 500, error.message)
-    const cfg = (await getCfg())!
-    return { ...publicCfg(cfg), lastResult: await sync(cfg, !same) }
+    return done(await syncSafe((await getCfg(companyId))!, !same))
   }
-  if (action === 'resync') {
-    const cfg = await getCfg()
-    if (!cfg) throw new Fail('not-configured', 409)
-    return { ...publicCfg(cfg), lastResult: await sync(cfg, true) }
-  }
+  if (action === 'resync') return done(await syncSafe(await need(), true))
   if (action === 'disconnect') {
-    await db().from('odoo_config').delete().eq('id', 1)
-    return { configured: false }
+    await db().from('odoo_connections').delete().eq('company_id', companyId)
+    return { companyId, disconnected: true }
   }
   throw new Fail('bad-action')
 }

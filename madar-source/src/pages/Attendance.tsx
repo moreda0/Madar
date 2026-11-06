@@ -126,7 +126,7 @@ export function Attendance() {
           </select>
         )}
         <span className="muted">مواعيد العمل <span className="num">{company.workStart} - {company.workEnd}</span></span>
-        {company.odooCompanyId && <span className="chip" style={{ fontSize: 12 }}>الحضور جاي من أودو</span>}
+        {company.odooLinked && <span className="chip" style={{ fontSize: 12 }}>الحضور جاي من أودو</span>}
         <span className="spacer" />
         {role === 'admin' && <button className="btn sm" onClick={() => setQrOpen(true)}><Icon name="qr" size={16} /> كود الحضور للشركة</button>}
       </div>
